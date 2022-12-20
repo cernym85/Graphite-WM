@@ -22,7 +22,9 @@
 			<LayoutCol class="workspace-grid-resize-gutter" data-gutter-horizontal @pointerdown="(e: PointerEvent) => resizePanel(e)"></LayoutCol>
 			<LayoutCol class="workspace-grid-subdivision" style="flex-grow: 0.2">
 				<LayoutRow class="workspace-grid-subdivision" style="flex-grow: 402">
-					<Panel :panelType="'Properties'" :tabLabels="[{ name: 'Properties' }]" :tabActiveIndex="0" />
+					<Panel id="__myscadaSelectPanelIdForActive" :panelType="'Properties'"
+						:tabLabels="[{ name: 'Properties' }, { name: 'Animations' }]" :tabActiveIndex="0"
+						:clickAction="(index:number) =>changeTab(index)" />
 				</LayoutRow>
 				<LayoutRow class="workspace-grid-resize-gutter" data-gutter-vertical @pointerdown="(e: PointerEvent) => resizePanel(e)"></LayoutRow>
 				<LayoutRow class="workspace-grid-subdivision" style="flex-grow: 590">
@@ -94,6 +96,23 @@ export default defineComponent({
 		},
 	},
 	methods: {
+		changeTab(index: number) {
+			let tab = window.document.getElementById("__myscadaSelectPanelIdForActive");
+			let children = tab?.getElementsByClassName("tab");
+			if (children){
+				for (let i = 0; i < children.length; i++) {
+					if (i === index) {
+						children[i].classList.add('active');
+					}
+					else {
+						children[i].classList.remove('active');
+					}
+				}
+				if (index===0){
+					window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
+				}
+			}
+		},
 		resizePanel(event: PointerEvent) {
 			const gutter = (event.target || undefined) as HTMLDivElement | undefined;
 			const nextSibling = (gutter?.nextElementSibling || undefined) as HTMLDivElement | undefined;

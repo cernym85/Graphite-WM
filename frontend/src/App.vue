@@ -248,6 +248,8 @@ import { createEditor, type Editor } from "@/wasm-communication/editor";
 
 import MainWindow from "@/components/window/MainWindow.vue";
 
+import { createWindowmessage } from "./state-providers/windowmessage";
+
 const managerDestructors: {
 	createClipboardManager?: () => void;
 	createDragManager?: () => void;
@@ -292,6 +294,7 @@ export default defineComponent({
 			fonts: createFontsState(editor),
 			fullscreen: createFullscreenState(editor),
 			panels: createPanelsState(editor),
+			windowmessage: createWindowmessage(editor),
 			portfolio: createPortfolioState(editor),
 			workspace: createWorkspaceState(editor),
 			nodeGraph: createNodeGraphState(editor),
