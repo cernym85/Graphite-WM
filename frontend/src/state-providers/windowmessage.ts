@@ -56,8 +56,11 @@ export function createWindowmessage(editor: Editor) {
 			r.style.setProperty("--color-1-nearblack-rgb", 255, 255, 255);
 			r.style.setProperty("--color-2-mildblack", "#ddd");
 			r.style.setProperty("--color-2-mildblack-rgb", 221, 221, 221);
-			r.style.setProperty("--color-3-darkgray", "#ccc");
-			r.style.setProperty("--color-3-darkgray-rgb", 204, 204, 204);
+
+			//r.style.setProperty("--color-3-darkgray", "#ccc");
+			//r.style.setProperty("--color-3-darkgray-rgb", 204, 204, 204);
+			r.style.setProperty("--color-3-darkgray", "#eee");
+			r.style.setProperty("--color-3-darkgray-rgb", 238, 238, 238);
 			r.style.setProperty("--color-4-dimgray", "#bbb");
 			r.style.setProperty("--color-4-dimgray-rgb", 187, 187, 187);
 			r.style.setProperty("--color-5-dullgray", "#aaa");
