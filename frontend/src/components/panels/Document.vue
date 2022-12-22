@@ -115,7 +115,7 @@
 					}
 
 					.color-vector {
-						fill: #fff;
+						fill: var(--color-f-white);
 					}
 
 					.color-raster {
