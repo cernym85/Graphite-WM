@@ -119,6 +119,10 @@ export function createPanelsState(editor: Editor) {
 		editor.subscriptions.subscribeJsMessage(TriggerViewportResize, async () => {
 			await nextTick();
 			state.documentPanel.viewportResize();
+
+			setTimeout(() => {
+				window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
+			}, 0);
 		});
 		editor.subscriptions.subscribeJsMessage(TriggerRefreshBoundsOfViewports, async () => {
 			// Wait to display the unpopulated document panel (missing: tools, options bar content, scrollbar positioning, and canvas)

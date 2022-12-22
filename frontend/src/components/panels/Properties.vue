@@ -82,9 +82,11 @@ export default defineComponent({
 			}
 		});
 
+		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
 			this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
-			/*
+			
+			
 			try{
 			let obj: any = updatePropertyPanelSectionsLayout;
 			if (obj.layout && obj.layout.length>0){
@@ -96,8 +98,10 @@ export default defineComponent({
 			}
 			}
 			catch (e){}
-			*/
+			
+			
 		});
+		
 	},
 	components: {
 		LayoutCol,

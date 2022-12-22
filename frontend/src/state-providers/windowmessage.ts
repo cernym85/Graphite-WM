@@ -10,6 +10,7 @@
 
 import { type Editor } from "@/wasm-communication/editor";
 import { TriggerViewportResize, UpdateDocumentRulers } from "@/wasm-communication/messages";
+import { nextTick } from "vue";
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createWindowmessage(editor: Editor) {
@@ -120,9 +121,10 @@ export function createWindowmessage(editor: Editor) {
 			);
 		});
 
-		editor.subscriptions.subscribeJsMessage(TriggerViewportResize, async () => {
-			window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
-		});
+		//editor.subscriptions.subscribeJsMessage(TriggerViewportResize, async () => {
+		//await nextTick();
+		//window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
+		//});
 	}
 
 	subscribeDocumentPanel();
