@@ -49,7 +49,6 @@ export default defineComponent({
 	mounted() {
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelOptionsLayout, (updatePropertyPanelOptionsLayout) => {
 			this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
-
 			let processed = false;
 			let type = "";
 			try {
@@ -85,6 +84,19 @@ export default defineComponent({
 
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
 			this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
+			/*
+			try{
+			let obj: any = updatePropertyPanelSectionsLayout;
+			if (obj.layout && obj.layout.length>0){
+				if (obj.layout[0].name==="Artboard"){
+					let w = obj.layout[0].layout[1].rowWidgets[2].value;
+					let h = obj.layout[0].layout[1].rowWidgets[4].value;
+					window.parent.postMessage(JSON.stringify({ type: "canvasSize", w:w,h:h }), "*");
+				}
+			}
+			}
+			catch (e){}
+			*/
 		});
 	},
 	components: {

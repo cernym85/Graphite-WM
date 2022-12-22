@@ -9,7 +9,7 @@
 // npm run start
 
 import { type Editor } from "@/wasm-communication/editor";
-import { UpdateDocumentRulers } from "@/wasm-communication/messages";
+import { TriggerViewportResize, UpdateDocumentRulers } from "@/wasm-communication/messages";
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createWindowmessage(editor: Editor) {
@@ -118,6 +118,10 @@ export function createWindowmessage(editor: Editor) {
 				JSON.stringify({ type: "position", svg: { x: origin.x, y: origin.y, zoom: spacing / interval }, canvas: { x: rect.left, y: rect.top, w: rect.width, h: rect.height } }),
 				"*"
 			);
+		});
+
+		editor.subscriptions.subscribeJsMessage(TriggerViewportResize, async () => {
+			window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
 		});
 	}
 
