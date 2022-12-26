@@ -120,11 +120,6 @@ export function createWindowmessage(editor: Editor) {
 				"*"
 			);
 		});
-
-		//editor.subscriptions.subscribeJsMessage(TriggerViewportResize, async () => {
-		//await nextTick();
-		//window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
-		//});
 	}
 
 	subscribeDocumentPanel();

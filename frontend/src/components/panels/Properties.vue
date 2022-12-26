@@ -85,15 +85,20 @@ export default defineComponent({
 		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
 			this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
-			
-			
+			//detekce zmeny velikosti kanvasu
 			try{
 			let obj: any = updatePropertyPanelSectionsLayout;
 			if (obj.layout && obj.layout.length>0){
 				if (obj.layout[0].name==="Artboard"){
-					let w = obj.layout[0].layout[1].rowWidgets[2].value;
-					let h = obj.layout[0].layout[1].rowWidgets[4].value;
-					window.parent.postMessage(JSON.stringify({ type: "canvasSize", w:w,h:h }), "*");
+					let w = obj.layout[0].layout[1].rowWidgets[2].props.value;
+					let h = obj.layout[0].layout[1].rowWidgets[4].props.value;
+				
+					let x = obj.layout[0].layout[0].rowWidgets[2].props.value;
+					let y = obj.layout[0].layout[0].rowWidgets[4].props.value;
+					if (w && h){
+						let data = JSON.stringify({ type: "canvasSize", w: w, h: h, x: x, y: y });
+						window.parent.postMessage(data, "*");
+					}
 				}
 			}
 			}

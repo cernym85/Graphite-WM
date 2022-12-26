@@ -111,6 +111,7 @@ export default defineComponent({
 				if (index===0){
 					window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
 				}
+				
 			}
 		},
 		resizePanel(event: PointerEvent) {

@@ -120,7 +120,15 @@ export function createPanelsState(editor: Editor) {
 			await nextTick();
 			state.documentPanel.viewportResize();
 
+			//zmena velikosti properties okna
+			//prepneme na properties a skryjeme selection okno
 			setTimeout(() => {
+				let tab = window.document.getElementById("__myscadaSelectPanelIdForActive");
+				let children = tab?.getElementsByClassName("tab");
+				if (children) {
+					children[0].classList.add("active");
+					children[1].classList.remove("active");
+				}
 				window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
 			}, 0);
 		});
