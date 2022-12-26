@@ -111,7 +111,17 @@ export default defineComponent({
 				if (index===0){
 					window.parent.postMessage(JSON.stringify({ type: "selection", action: "hide" }), "*");
 				}
-				
+				else{
+					let tab = window.document.getElementById("__myscadaSelectPanelIdForActive");
+					let children = tab?.getElementsByClassName("tab");
+					if (children && children.length > 1 && children[1].classList.contains("active")) {
+						let pb = tab?.getElementsByClassName("panel-body");
+						if (pb && pb.length > 0) {
+							let rect = pb[0].getBoundingClientRect();
+							window.parent.postMessage(JSON.stringify({ type: "selection", action: "empty",  x: rect.x, y: rect.y, w: rect.width, h: rect.height }), "*");
+						}
+					}
+				}
 			}
 		},
 		resizePanel(event: PointerEvent) {
