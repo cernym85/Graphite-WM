@@ -1,4 +1,4 @@
-//! This file is where functions are defined to be called directly from JS.
+//! This file is where functions are defined to be called directly from JS.export
 //! It serves as a thin wrapper over the editor backend API that relies
 //! on the dispatcher messaging system and more complex Rust data types.
 
@@ -15,6 +15,10 @@ use editor::messages::prelude::*;
 use graphene::color::Color;
 use graphene::layers::imaginate_layer::ImaginateStatus;
 use graphene::LayerId;
+
+use editor::messages::frontend::utility_types::FileType;
+use editor::messages::frontend::utility_types::ExportBounds;
+
 
 use serde::Serialize;
 use serde_wasm_bindgen::{self, from_value};
@@ -227,6 +231,18 @@ impl JsEditorHandle {
 	#[wasm_bindgen(js_name = selectDocument)]
 	pub fn select_document(&self, document_id: u64) {
 		let message = PortfolioMessage::SelectDocument { document_id };
+		self.dispatch(message);
+	}
+
+	#[wasm_bindgen(js_name = exportDocument)]
+	pub fn exportDocument(&self) {
+		let message = 
+		DocumentMessage::ExportDocument {
+					file_name: "export".to_owned(),
+					file_type: FileType::Svg,
+					scale_factor: 1.0,
+					bounds: ExportBounds::AllArtwork,
+				};
 		self.dispatch(message);
 	}
 
