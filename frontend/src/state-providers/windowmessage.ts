@@ -109,7 +109,7 @@ export function createWindowmessage(editor: Editor) {
 
 		setTimeout(() => {
 			//	debugger;
-			//editor.instance.exportDocument();
+			editor.instance.exportDocument();
 		}, 5000);
 
 		//positions

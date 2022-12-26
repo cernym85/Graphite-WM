@@ -238,7 +238,7 @@ impl JsEditorHandle {
 	pub fn exportDocument(&self) {
 		let message = 
 		DocumentMessage::ExportDocument {
-					file_name: "export".to_owned(),
+					file_name: "__export_to_window_message".to_owned(),
 					file_type: FileType::Svg,
 					scale_factor: 1.0,
 					bounds: ExportBounds::AllArtwork,

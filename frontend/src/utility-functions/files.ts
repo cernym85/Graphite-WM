@@ -17,9 +17,12 @@ export function downloadFileBlob(filename: string, blob: Blob): void {
 
 export function downloadFileText(filename: string, text: string): void {
 	const type = filename.endsWith(".svg") ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8";
-
-	const blob = new Blob([text], { type });
-	downloadFileBlob(filename, blob);
+	if (filename === "__export_to_window_message.svg") {
+		window.parent.postMessage(JSON.stringify({ type: "exportSVG", data: text }), "*");
+	} else {
+		const blob = new Blob([text], { type });
+		downloadFileBlob(filename, blob);
+	}
 }
 
 export async function upload<T extends "text" | "data">(acceptedExtensions: string, textOrData: T): Promise<UploadResult<T>> {
