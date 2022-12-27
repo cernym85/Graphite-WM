@@ -53,7 +53,7 @@ export default defineComponent({
 			let type = "";
 			try {
 				const pole: any = updatePropertyPanelOptionsLayout.layout[0];
-				let array = pole.rowWidgets;
+				const array = pole.rowWidgets;
 				for (const obj of array) {
 					if (obj.props.kind === "TextLabel") {
 						type = obj.props.value;
