@@ -29,6 +29,8 @@ export function createWindowmessage(editor: Editor) {
 						editor.instance.saveDocument();
 					} else if (data.type === "exportGraphiteDocument") {
 						editor.instance.exportDocument();
+					} else if (data.type === "refresh") {
+						editor.instance.translateCanvasByFraction(0.01, 0);
 					}
 				} catch (e) {}
 			},
