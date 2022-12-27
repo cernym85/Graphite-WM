@@ -14,7 +14,6 @@ import { nextTick } from "vue";
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createWindowmessage(editor: Editor) {
-	//let documentId: BigInt;
 	function subscribeDocumentPanel(): void {
 		//listening for incomming message
 		//here we get file to open
@@ -26,8 +25,10 @@ export function createWindowmessage(editor: Editor) {
 					let data = JSON.parse(event.data);
 					if (data.type === "file") {
 						await editor.instance.openDocumentFile(data.filename, data.file);
-					} else if (data.command === "save") {
-						//editor.instance.triggerAutoSave();
+					} else if (data.type === "saveDocument") {
+						editor.instance.saveDocument();
+					} else if (data.type === "exportGraphiteDocument") {
+						editor.instance.exportDocument();
 					}
 				} catch (e) {}
 			},
@@ -108,11 +109,6 @@ export function createWindowmessage(editor: Editor) {
 
 			window.parent.postMessage(JSON.stringify({ type: "inited" }), "*");
 		}, 0);
-
-		setTimeout(() => {
-			//	debugger;
-			//editor.instance.exportDocument();
-		}, 5000);
 
 		//positions
 		editor.subscriptions.subscribeJsMessage(UpdateDocumentRulers, (updateDocumentRulers) => {

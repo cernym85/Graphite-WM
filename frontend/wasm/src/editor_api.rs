@@ -16,9 +16,8 @@ use graphene::color::Color;
 use graphene::layers::imaginate_layer::ImaginateStatus;
 use graphene::LayerId;
 
-use editor::messages::frontend::utility_types::FileType;
 use editor::messages::frontend::utility_types::ExportBounds;
-
+use editor::messages::frontend::utility_types::FileType;
 
 use serde::Serialize;
 use serde_wasm_bindgen::{self, from_value};
@@ -236,13 +235,18 @@ impl JsEditorHandle {
 
 	#[wasm_bindgen(js_name = exportDocument)]
 	pub fn exportDocument(&self) {
-		let message = 
-		DocumentMessage::ExportDocument {
-					file_name: "__export_to_window_message".to_owned(),
-					file_type: FileType::Svg,
-					scale_factor: 1.0,
-					bounds: ExportBounds::AllArtwork,
-				};
+		let message = DocumentMessage::ExportDocument {
+			file_name: "__export_to_window_message".to_owned(),
+			file_type: FileType::Svg,
+			scale_factor: 1.0,
+			bounds: ExportBounds::AllArtwork,
+		};
+		self.dispatch(message);
+	}
+
+	#[wasm_bindgen(js_name = saveDocument)]
+	pub fn saveDocument(&self) {
+		let message = DocumentMessage::SaveDocument;
 		self.dispatch(message);
 	}
 

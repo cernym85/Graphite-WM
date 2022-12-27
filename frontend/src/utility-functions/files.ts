@@ -19,6 +19,8 @@ export function downloadFileText(filename: string, text: string): void {
 	const type = filename.endsWith(".svg") ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8";
 	if (filename === "__export_to_window_message.svg") {
 		window.parent.postMessage(JSON.stringify({ type: "exportSVG", data: text }), "*");
+	} else if (filename.endsWith(".graphite")) {
+		window.parent.postMessage(JSON.stringify({ type: "exportDocument", data: text }), "*");
 	} else {
 		const blob = new Blob([text], { type });
 		downloadFileBlob(filename, blob);
