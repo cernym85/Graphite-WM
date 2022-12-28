@@ -336,17 +336,30 @@ impl Layer {
 			self.data.render(&mut self.thumbnail_cache, &mut self.svg_defs_cache, transforms, render_data);
 
 			self.cache.clear();
+
 			let _ = writeln!(self.cache, r#"<g transform="matrix("#);
 			self.transform.to_cols_array().iter().enumerate().for_each(|(i, f)| {
 				let _ = self.cache.write_str(&(f.to_string() + if i == 5 { "" } else { "," }));
 			});
-			let _ = write!(
-				self.cache,
-				r#")" style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
-				self.blend_mode.to_svg_style_name(),
-				self.opacity,
-				self.thumbnail_cache.as_str()
-			);
+
+			if (self.name.is_some()) {
+				let _ = write!(
+					self.cache,
+					r#")" id='{}' style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
+					self.name.as_ref().unwrap(),
+					self.blend_mode.to_svg_style_name(),
+					self.opacity,
+					self.thumbnail_cache.as_str()
+				);
+			} else {
+				let _ = write!(
+					self.cache,
+					r#")" style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
+					self.blend_mode.to_svg_style_name(),
+					self.opacity,
+					self.thumbnail_cache.as_str()
+				);
+			}
 
 			self.cache_dirty = false;
 		}
