@@ -79,6 +79,13 @@ impl LayerData for TextLayer {
 
 			let _ = write!(
 				svg,
+				r#"<!--RPLME <text {} >{}</> RPLME-->"#,
+				self.path_style.render(render_data.view_mode, svg_defs, transform, bounds, transformed_bounds),
+				self.text
+			);
+
+			let _ = write!(
+				svg,
 				r#"<path d="{}" {} />"#,
 				path.to_svg(),
 				self.path_style.render(render_data.view_mode, svg_defs, transform, bounds, transformed_bounds)

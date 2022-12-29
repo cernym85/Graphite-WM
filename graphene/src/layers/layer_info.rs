@@ -342,7 +342,7 @@ impl Layer {
 				let _ = self.cache.write_str(&(f.to_string() + if i == 5 { "" } else { "," }));
 			});
 
-			if (self.name.is_some()) {
+			if self.name.is_some() {
 				let _ = write!(
 					self.cache,
 					r#")" id='{}' style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
