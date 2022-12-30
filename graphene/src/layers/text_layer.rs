@@ -77,10 +77,17 @@ impl LayerData for TextLayer {
 
 			let transformed_bounds = path.bounding_box().unwrap_or_default();
 
-			let pom = self.font.to_owned();
+			//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+			//let font = render_data.font_cache.resolve_font(&self.font);
+			//let mut font_url = "";
+			//if let Some(url) = font.and_then(|font| render_data.font_cache.get_preview_url(font)) {
+			//		font_url = url;
+			//	}
+
+			let pom = &self.font;
 			let _ = write!(
 				svg,
-				r#"<!--RPLME <text transform="matrix({})" {} x="0" y="{}" font-size="{}px" font-family="{}" font-style="{}">{}</text> RPLME-->"#,
+				r#"<!--RPLME FONTURL='' <text transform="matrix({})" {} x="0" y="{}" font-size="{}px" font-family="{}" font-style="{}">{}</text> RPLME-->"#,
 				transform
 					.to_cols_array()
 					.iter()
@@ -95,6 +102,7 @@ impl LayerData for TextLayer {
 				pom.font_style,
 				self.text
 			);
+			//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 			let _ = write!(
 				svg,
