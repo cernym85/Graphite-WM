@@ -78,16 +78,10 @@ impl LayerData for TextLayer {
 			let transformed_bounds = path.bounding_box().unwrap_or_default();
 
 			//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-			//let font = render_data.font_cache.resolve_font(&self.font);
-			//let mut font_url = "";
-			//if let Some(url) = font.and_then(|font| render_data.font_cache.get_preview_url(font)) {
-			//		font_url = url;
-			//	}
-
 			let pom = &self.font;
 			let _ = write!(
 				svg,
-				r#"<!--RPLME FONTURL='' <text transform="matrix({})" {} x="0" y="{}" font-size="{}px" font-family="{}" font-style="{}">{}</text> RPLME-->"#,
+				r#"<!--RPLME <text dominant-baseline="hanging" transform="matrix({})" {} x="0" y="0" font-size="{}px" font-family="{}" font-style="{}">{}</text> RPLME-->"#,
 				transform
 					.to_cols_array()
 					.iter()
@@ -95,8 +89,7 @@ impl LayerData for TextLayer {
 					.map(|(i, entry)| { entry.to_string() + if i == 5 { "" } else { "," } })
 					.collect::<String>(),
 				self.path_style.render(render_data.view_mode, svg_defs, transform, bounds, transformed_bounds),
-				//transformed_bounds[0][0],
-				bounds[1][1], //// transform.to_cols_array()[0]
+				//bounds[1][1], height
 				self.size,
 				pom.font_family,
 				pom.font_style,
