@@ -79,9 +79,20 @@ impl LayerData for TextLayer {
 
 			//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 			let pom = &self.font;
+			let class: Vec<&str> = pom.font_style.split(" ").collect();
+			let mut fontweight = class[class.len() - 1].to_string();
+			fontweight.pop(); // remove last
+			if fontweight.len() > 0 {
+				fontweight.remove(0); // remove first
+			}
+
+			if pom.font_style.contains("Italic") {
+				fontweight += "_italic";
+			}
+
 			let _ = write!(
 				svg,
-				r#"<!--RPLME <text dominant-baseline="hanging" transform="matrix({})" {} x="0" y="0" font-size="{}px" font-family="{}" font-style="{}">{}</text> RPLME-->"#,
+				r#"<!--RPLME <text dominant-baseline="hanging" transform="matrix({})" {} x="0" y="0" font-size="{}px" font-family="{}_{}">{}</text> RPLME-->"#,
 				transform
 					.to_cols_array()
 					.iter()
@@ -92,7 +103,7 @@ impl LayerData for TextLayer {
 				//bounds[1][1], height
 				self.size,
 				pom.font_family,
-				pom.font_style,
+				fontweight,
 				self.text
 			);
 			//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
