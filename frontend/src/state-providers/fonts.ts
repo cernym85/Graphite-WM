@@ -27,7 +27,8 @@ export function createFontsState(editor: Editor) {
 	async function getFontFileUrl(fontFamily: string, fontStyle: string): Promise<string | undefined> {
 		const font = (await fontList).find((value) => value.family === fontFamily);
 		const fontFileUrl = font?.files.get(fontStyle);
-		return fontFileUrl?.replace("http://", "https://");
+		//return fontFileUrl?.replace("http://", "https://");
+		return fontFileUrl;
 	}
 
 	function formatFontStyleName(fontStyle: string): string {
@@ -77,7 +78,7 @@ export function createFontsState(editor: Editor) {
 }
 export type FontsState = ReturnType<typeof createFontsState>;
 
-const fontListAPI = "https://api.graphite.rs/font-list";
+const fontListAPI = "http://localhost/fonts/font-list"; //"https://api.graphite.rs/font-list";
 
 // From https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
 const weightNameMapping = new Map([
