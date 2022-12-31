@@ -91,9 +91,9 @@ export function createWindowmessage(editor: Editor) {
 		setTimeout(async () => {
 			//skryjeme horni menu a tab
 			let tb: any = document.getElementsByClassName("title-bar");
-			//tb[0].style.display = "none";
+			tb[0].style.display = "none";
 			let tab: any = document.getElementsByClassName("tab-bar");
-			//tab[0].style.display = "none";
+			tab[0].style.display = "none";
 
 			//get document id
 			//let tabactive: any = document.getElementsByClassName("tab active");
