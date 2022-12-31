@@ -331,7 +331,7 @@ impl MessageHandler<DocumentMessage, (u64, &InputPreprocessorMessageHandler, &Pe
 
 				// Calculate the bounding box of the region to be exported
 				let bounds = match bounds {
-					ExportBounds::AllArtwork => self.all_layer_bounds(&persistent_data.font_cache),
+					ExportBounds::AllArtwork => self.artboard_message_handler.artboards_graphene_document.root.aabb(&persistent_data.font_cache), //self.all_layer_bounds(&persistent_data.font_cache),
 					ExportBounds::Selection => self.selected_visible_layers_bounding_box(&persistent_data.font_cache),
 					ExportBounds::Artboard(id) => self
 						.artboard_message_handler
@@ -341,6 +341,9 @@ impl MessageHandler<DocumentMessage, (u64, &InputPreprocessorMessageHandler, &Pe
 						.and_then(|layer| layer.aabb(&persistent_data.font_cache)),
 				}
 				.unwrap_or_default();
+
+				//let bounds = self.artboard_message_handler.artboards_graphene_document.root.aabb(&persistent_data.font_cache).unwrap();
+
 				let size = bounds[1] - bounds[0];
 				let transform = (DAffine2::from_translation(bounds[0]) * DAffine2::from_scale(size)).inverse();
 
