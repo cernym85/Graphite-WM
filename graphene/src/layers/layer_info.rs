@@ -345,8 +345,10 @@ impl Layer {
 			if self.name.is_some() {
 				let _ = write!(
 					self.cache,
-					r#")" id='{}' style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
+					r#")" id='{}' data-centerOfRotation="{},{}" style="mix-blend-mode: {}; opacity: {}">{}</g>"#,
 					self.name.as_ref().unwrap(),
+					&self.pivot[0],
+					&self.pivot[1],
 					self.blend_mode.to_svg_style_name(),
 					self.opacity,
 					self.thumbnail_cache.as_str()
