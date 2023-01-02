@@ -78,7 +78,7 @@ export function createFontsState(editor: Editor) {
 }
 export type FontsState = ReturnType<typeof createFontsState>;
 
-const fontListAPI = "http://localhost/fonts/font-list"; //"https://api.graphite.rs/font-list";
+const fontListAPI = "/fonts/font-list"; //http://localhost //"https://api.graphite.rs/font-list";
 
 // From https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
 const weightNameMapping = new Map([

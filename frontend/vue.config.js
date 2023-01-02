@@ -6,6 +6,7 @@ const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const LicenseCheckerWebpackPlugin = require("license-checker-webpack-plugin");
 
 module.exports = {
+	publicPath: "/editor/",
 	lintOnSave: "warning",
 	// https://cli.vuejs.org/guide/webpack.html
 	chainWebpack: (config) => {
