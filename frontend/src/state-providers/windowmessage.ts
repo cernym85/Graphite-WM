@@ -50,42 +50,37 @@ export function createWindowmessage(editor: Editor) {
 			var r: any = document.querySelector(":root");
 
 			r.style.setProperty("--color-0-black", "#fff");
-			r.style.setProperty("--color-0-black-rgb", 255, 255, 255);
-			//r.style.setProperty("--color-1-nearblack", "#eee");
-			//r.style.setProperty("--color-1-nearblack-rgb", 238, 238, 238);
+			r.style.setProperty("--color-0-black-rgb", "255, 255, 255");
 			r.style.setProperty("--color-1-nearblack", "#fff");
-			r.style.setProperty("--color-1-nearblack-rgb", 255, 255, 255);
+			r.style.setProperty("--color-1-nearblack-rgb", "255, 255, 255");
 			r.style.setProperty("--color-2-mildblack", "#ddd");
-			r.style.setProperty("--color-2-mildblack-rgb", 221, 221, 221);
-
-			//r.style.setProperty("--color-3-darkgray", "#ccc");
-			//r.style.setProperty("--color-3-darkgray-rgb", 204, 204, 204);
+			r.style.setProperty("--color-2-mildblack-rgb", "221, 221, 221");
 			r.style.setProperty("--color-3-darkgray", "#eee");
-			r.style.setProperty("--color-3-darkgray-rgb", 238, 238, 238);
+			r.style.setProperty("--color-3-darkgray-rgb", "238, 238, 238");
 			r.style.setProperty("--color-4-dimgray", "#bbb");
-			r.style.setProperty("--color-4-dimgray-rgb", 187, 187, 187);
+			r.style.setProperty("--color-4-dimgray-rgb", "187, 187, 187");
 			r.style.setProperty("--color-5-dullgray", "#aaa");
-			r.style.setProperty("--color-5-dullgray-rgb", 170, 170, 170);
+			r.style.setProperty("--color-5-dullgray-rgb", "170, 170, 170");
 			r.style.setProperty("--color-6-lowergray", "#999999");
-			r.style.setProperty("--color-6-lowergray-rgb", 153, 153, 153);
+			r.style.setProperty("--color-6-lowergray-rgb", "153, 153, 153");
 			r.style.setProperty("--color-7-middlegray", "#929292");
-			r.style.setProperty("--color-7-middlegray-rgb", 146, 146, 146);
+			r.style.setProperty("--color-7-middlegray-rgb", "146, 146, 146");
 			r.style.setProperty("--color-8-uppergray", "#777");
-			r.style.setProperty("--color-8-uppergray-rgb", 119, 119, 119);
+			r.style.setProperty("--color-8-uppergray-rgb", "119, 119, 119");
 			r.style.setProperty("--color-9-palegray", "#666");
-			r.style.setProperty("--color-9-palegray-rgb", 102, 102, 102);
+			r.style.setProperty("--color-9-palegray-rgb", "102, 102, 102");
 			r.style.setProperty("--color-a-softgray", "#555");
-			r.style.setProperty("--color-a-softgray-rgb", 85, 85, 85);
+			r.style.setProperty("--color-a-softgray-rgb", "85, 85, 85");
 			r.style.setProperty("--color-b-lightgray", "#444");
-			r.style.setProperty("--color-b-lightgray-rgb", 68, 68, 68);
+			r.style.setProperty("--color-b-lightgray-rgb", "68, 68, 68");
 			r.style.setProperty("--color-c-brightgray", "#333");
-			r.style.setProperty("--color-c-brightgray-rgb", 51, 51, 51);
+			r.style.setProperty("--color-c-brightgray-rgb", "51, 51, 51");
 			r.style.setProperty("--color-d-mildwhite", "#222");
-			r.style.setProperty("--color-d-mildwhite-rgb", 34, 34, 34);
+			r.style.setProperty("--color-d-mildwhite-rgb", "34, 34, 34");
 			r.style.setProperty("--color-e-nearwhite", "#111");
-			r.style.setProperty("--color-e-nearwhite-rgb", 17, 17, 17);
+			r.style.setProperty("--color-e-nearwhite-rgb", "17, 17, 17");
 			r.style.setProperty("--color-f-white", " #000");
-			r.style.setProperty("--color-f-white-rgb", 0, 0, 0);
+			r.style.setProperty("--color-f-white-rgb", "0, 0, 0");
 		}
 
 		setTimeout(async () => {
