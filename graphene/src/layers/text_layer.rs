@@ -52,7 +52,7 @@ impl LayerData for TextLayer {
 		if self.editable {
 			let font = render_data.font_cache.resolve_font(&self.font);
 			if let Some(url) = font.and_then(|font| render_data.font_cache.get_preview_url(font)) {
-				let _ = write!(svg, r#"<style>@font-face {{font-family: local-font;src: url({});}}")</style>"#, url);
+				let _ = write!(svg, r#"<style>@font-face {{font-family: local-font;src: url('{}');}}")</style>"#, url);
 			}
 
 			let _ = write!(
