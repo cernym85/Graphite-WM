@@ -48,7 +48,8 @@ export default defineComponent({
 	},
 	mounted() {
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelOptionsLayout, (updatePropertyPanelOptionsLayout) => {
-			this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
+			patchWidgetLayout(this.propertiesOptionsLayout, updatePropertyPanelOptionsLayout);
+			//this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
 			let processed = false;
 			let type = "";
 			try {
@@ -84,7 +85,8 @@ export default defineComponent({
 
 		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
-			this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
+			patchWidgetLayout(this.updatePropertyPanelSectionsLayout, UpdatePropertyPanelSectionsLayout);
+			//this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
 			//detekce zmeny velikosti kanvasu
 			try{
 			let obj: any = updatePropertyPanelSectionsLayout;
