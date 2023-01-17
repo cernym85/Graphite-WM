@@ -48,15 +48,15 @@ export default defineComponent({
 	},
 	mounted() {
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelOptionsLayout, (updatePropertyPanelOptionsLayout) => {
-			debugger
+			
 			patchWidgetLayout(this.propertiesOptionsLayout, updatePropertyPanelOptionsLayout);
 			//this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
 			let processed = false;
 			let type = "";
 			debugger
 			try {
-				/*
-				const pole: any = updatePropertyPanelOptionsLayout.layout[0];
+				let itm:any=updatePropertyPanelOptionsLayout;
+				const pole: any = itm.diff[0].newValue[0];
 				
 				const array = pole.rowWidgets;
 				for (const obj of array) {
@@ -80,7 +80,7 @@ export default defineComponent({
 						break;
 					}
 				}
-				*/
+				
 			} catch (e) { }
 
 			if (!processed) {
@@ -90,20 +90,35 @@ export default defineComponent({
 
 		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
-			debugger
 			patchWidgetLayout(this.propertiesSectionsLayout, updatePropertyPanelSectionsLayout);
 			//this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
 			//detekce zmeny velikosti kanvasu
 			try{
-			let obj: any = updatePropertyPanelSectionsLayout;
+			let pom:any=this.propertiesSectionsLayout;
+			let obj:any=pom.layout[0];
 			if (obj.layout && obj.layout.length>0){
-				if (obj.layout[0].name==="Artboard"){
-					let w = obj.layout[0].layout[1].rowWidgets[2].props.value;
-					let h = obj.layout[0].layout[1].rowWidgets[4].props.value;
-				
-					let x = obj.layout[0].layout[0].rowWidgets[2].props.value;
-					let y = obj.layout[0].layout[0].rowWidgets[4].props.value;
-					if (w && h){
+				if (obj.name==="Artboard"){
+					let w=-1;
+					let h=-1;
+					let x=-1;
+					let y=-1;
+					for (const item of obj.layout[0].rowWidgets){
+						if (item.props.kind==="NumberInput" && x===-1){
+							x=item.props.value;
+						}
+						else if (item.props.kind==="NumberInput" && y===-1){
+							y=item.props.value;
+						}
+					}
+					for (const item of obj.layout[1].rowWidgets){
+						if (item.props.kind==="NumberInput" && w===-1){
+							w=item.props.value;
+						}
+						else if (item.props.kind==="NumberInput" && h===-1){
+							h=item.props.value;
+						}
+					}
+					if (w>=0 && h>=0){
 						let data = JSON.stringify({ type: "canvasSize", w: w, h: h, x: x, y: y });
 						window.parent.postMessage(data, "*");
 					}
@@ -111,8 +126,6 @@ export default defineComponent({
 			}
 			}
 			catch (e){}
-			
-			
 		});
 		
 	},
