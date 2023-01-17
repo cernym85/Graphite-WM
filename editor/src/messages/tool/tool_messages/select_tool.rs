@@ -1,6 +1,6 @@
 use crate::application::generate_uuid;
 use crate::consts::{ROTATE_SNAP_ANGLE, SELECTION_TOLERANCE};
-use crate::messages::frontend::utility_types::{FrontendImageData, MouseCursorIcon};
+use crate::messages::frontend::utility_types::MouseCursorIcon;
 use crate::messages::input_mapper::utility_types::input_keyboard::{Key, KeysGroup, MouseMotion};
 use crate::messages::input_mapper::utility_types::input_mouse::ViewportPosition;
 use crate::messages::layout::utility_types::layout_widget::{Layout, LayoutGroup, PropertyHolder, Widget, WidgetCallback, WidgetHolder, WidgetLayout};
@@ -18,12 +18,12 @@ use crate::messages::tool::common_functionality::transformation_cage::*;
 use crate::messages::tool::utility_types::{EventToMessageMap, Fsm, ToolActionHandlerData, ToolMetadata, ToolTransition, ToolType};
 use crate::messages::tool::utility_types::{HintData, HintGroup, HintInfo};
 
-use graphene::boolean_ops::BooleanOperation;
-use graphene::document::Document;
-use graphene::intersection::Quad;
-use graphene::layers::layer_info::LayerDataType;
-use graphene::LayerId;
-use graphene::Operation;
+use document_legacy::boolean_ops::BooleanOperation;
+use document_legacy::document::Document;
+use document_legacy::intersection::Quad;
+use document_legacy::layers::layer_info::LayerDataType;
+use document_legacy::LayerId;
+use document_legacy::Operation;
 
 use glam::{DAffine2, DVec2};
 use serde::{Deserialize, Serialize};
@@ -173,7 +173,7 @@ impl PropertyHolder for SelectTool {
 				})),
 				WidgetHolder::new(Widget::PopoverButton(PopoverButton {
 					header: "Align".into(),
-					text: "The contents of this popover menu are coming soon".into(),
+					text: "Coming soon".into(),
 					..Default::default()
 				})),
 				WidgetHolder::new(Widget::Separator(Separator {
@@ -200,7 +200,7 @@ impl PropertyHolder for SelectTool {
 				})),
 				WidgetHolder::new(Widget::PopoverButton(PopoverButton {
 					header: "Flip".into(),
-					text: "The contents of this popover menu are coming soon".into(),
+					text: "Coming soon".into(),
 					..Default::default()
 				})),
 				WidgetHolder::new(Widget::Separator(Separator {
@@ -248,7 +248,7 @@ impl PropertyHolder for SelectTool {
 				})),
 				WidgetHolder::new(Widget::PopoverButton(PopoverButton {
 					header: "Boolean".into(),
-					text: "The contents of this popover menu are coming soon".into(),
+					text: "Coming soon".into(),
 					..Default::default()
 				})),
 				WidgetHolder::new(Widget::Separator(Separator {
@@ -375,7 +375,7 @@ impl Fsm for SelectToolFsmState {
 		self,
 		event: ToolMessage,
 		tool_data: &mut Self::ToolData,
-		(document, document_id, _global_tool_data, input, font_cache): ToolActionHandlerData,
+		(document, _document_id, _global_tool_data, input, font_cache): ToolActionHandlerData,
 		_tool_options: &Self::ToolOptions,
 		responses: &mut VecDeque<Message>,
 	) -> Self {
@@ -415,8 +415,8 @@ impl Fsm for SelectToolFsmState {
 					let quad = Quad::from_box([mouse_pos - tolerance, mouse_pos + tolerance]);
 
 					// Check the last (top most) intersection layer.
-					if let Some(intersect_layer_path) = document.graphene_document.intersects_quad_root(quad, font_cache).last() {
-						if let Ok(intersect) = document.graphene_document.layer(intersect_layer_path) {
+					if let Some(intersect_layer_path) = document.document_legacy.intersects_quad_root(quad, font_cache).last() {
+						if let Ok(intersect) = document.document_legacy.layer(intersect_layer_path) {
 							match intersect.data {
 								LayerDataType::Text(_) => {
 									responses.push_front(ToolMessage::ActivateTool { tool_type: ToolType::Text }.into());
@@ -466,18 +466,22 @@ impl Fsm for SelectToolFsmState {
 
 					let mut selected: Vec<_> = document.selected_visible_layers().map(|path| path.to_vec()).collect();
 					let quad = tool_data.selection_quad();
-					let mut intersection = document.graphene_document.intersects_quad_root(quad, font_cache);
+					let mut intersection = document.document_legacy.intersects_quad_root(quad, font_cache);
 					// If the user is dragging the bounding box bounds, go into ResizingBounds mode.
 					// If the user is dragging the rotate trigger, go into RotatingBounds mode.
 					// If the user clicks on a layer that is in their current selection, go into the dragging mode.
 					// If the user clicks on new shape, make that layer their new selection.
 					// Otherwise enter the box select mode
 					let state = if tool_data.pivot.is_over(input.mouse.position) {
+						responses.push_back(DocumentMessage::StartTransaction.into());
+
 						tool_data.snap_manager.start_snap(document, document.bounding_boxes(None, None, font_cache), true, true);
 						tool_data.snap_manager.add_all_document_handles(document, &[], &[], &[]);
 
 						DraggingPivot
 					} else if let Some(selected_edges) = dragging_bounds {
+						responses.push_back(DocumentMessage::StartTransaction.into());
+
 						let snap_x = selected_edges.2 || selected_edges.3;
 						let snap_y = selected_edges.0 || selected_edges.1;
 
@@ -489,7 +493,7 @@ impl Fsm for SelectToolFsmState {
 						tool_data.layers_dragging = selected;
 
 						if let Some(bounds) = &mut tool_data.bounding_box_overlays {
-							let document = &document.graphene_document;
+							let document = &document.document_legacy;
 
 							let selected = &tool_data.layers_dragging.iter().collect::<Vec<_>>();
 							let mut selected = Selected::new(&mut bounds.original_transforms, &mut bounds.center_of_transformation, selected, responses, document);
@@ -498,9 +502,11 @@ impl Fsm for SelectToolFsmState {
 
 						ResizingBounds
 					} else if rotating_bounds {
+						responses.push_back(DocumentMessage::StartTransaction.into());
+
 						if let Some(bounds) = &mut tool_data.bounding_box_overlays {
 							let selected = selected.iter().collect::<Vec<_>>();
-							let mut selected = Selected::new(&mut bounds.original_transforms, &mut bounds.center_of_transformation, &selected, responses, &document.graphene_document);
+							let mut selected = Selected::new(&mut bounds.original_transforms, &mut bounds.center_of_transformation, &selected, responses, &document.document_legacy);
 
 							bounds.center_of_transformation = selected.mean_average_of_pivots(font_cache);
 						}
@@ -554,7 +560,7 @@ impl Fsm for SelectToolFsmState {
 					let snap = tool_data
 						.layers_dragging
 						.iter()
-						.filter_map(|path| document.graphene_document.viewport_bounding_box(path, font_cache).ok()?)
+						.filter_map(|path| document.document_legacy.viewport_bounding_box(path, font_cache).ok()?)
 						.flat_map(snapping::expand_bounds)
 						.collect();
 
@@ -572,7 +578,7 @@ impl Fsm for SelectToolFsmState {
 					tool_data.drag_current = mouse_position + closest_move;
 
 					if input.keyboard.get(duplicate as usize) && tool_data.not_duplicated_layers.is_none() {
-						tool_data.start_duplicates(document, document_id, responses);
+						tool_data.start_duplicates(document, responses);
 					} else if !input.keyboard.get(duplicate as usize) && tool_data.not_duplicated_layers.is_some() {
 						tool_data.stop_duplicates(responses);
 					}
@@ -592,7 +598,7 @@ impl Fsm for SelectToolFsmState {
 							let (delta, mut pivot) = movement.bounds_to_scale_transform(position, size);
 
 							let selected = &tool_data.layers_dragging.iter().collect::<Vec<_>>();
-							let mut selected = Selected::new(&mut bounds.original_transforms, &mut pivot, selected, responses, &document.graphene_document);
+							let mut selected = Selected::new(&mut bounds.original_transforms, &mut pivot, selected, responses, &document.document_legacy);
 
 							selected.update_transforms(delta);
 						}
@@ -618,7 +624,7 @@ impl Fsm for SelectToolFsmState {
 						let delta = DAffine2::from_angle(snapped_angle);
 
 						let selected = tool_data.layers_dragging.iter().collect::<Vec<_>>();
-						let mut selected = Selected::new(&mut bounds.original_transforms, &mut bounds.center_of_transformation, &selected, responses, &document.graphene_document);
+						let mut selected = Selected::new(&mut bounds.original_transforms, &mut bounds.center_of_transformation, &selected, responses, &document.document_legacy);
 
 						selected.update_transforms(delta);
 					}
@@ -679,6 +685,12 @@ impl Fsm for SelectToolFsmState {
 					Ready
 				}
 				(ResizingBounds, DragStop) => {
+					let response = match input.mouse.position.distance(tool_data.drag_start) < 10. * f64::EPSILON {
+						true => DocumentMessage::Undo,
+						false => DocumentMessage::CommitTransaction,
+					};
+					responses.push_back(response.into());
+
 					tool_data.snap_manager.cleanup(responses);
 
 					if let Some(bounds) = &mut tool_data.bounding_box_overlays {
@@ -688,6 +700,12 @@ impl Fsm for SelectToolFsmState {
 					Ready
 				}
 				(RotatingBounds, DragStop) => {
+					let response = match input.mouse.position.distance(tool_data.drag_start) < 10. * f64::EPSILON {
+						true => DocumentMessage::Undo,
+						false => DocumentMessage::CommitTransaction,
+					};
+					responses.push_back(response.into());
+
 					if let Some(bounds) = &mut tool_data.bounding_box_overlays {
 						bounds.original_transforms.clear();
 					}
@@ -695,6 +713,12 @@ impl Fsm for SelectToolFsmState {
 					Ready
 				}
 				(DraggingPivot, DragStop) => {
+					let response = match input.mouse.position.distance(tool_data.drag_start) < 10. * f64::EPSILON {
+						true => DocumentMessage::Undo,
+						false => DocumentMessage::CommitTransaction,
+					};
+					responses.push_back(response.into());
+
 					tool_data.snap_manager.cleanup(responses);
 
 					Ready
@@ -703,7 +727,7 @@ impl Fsm for SelectToolFsmState {
 					let quad = tool_data.selection_quad();
 					responses.push_front(
 						DocumentMessage::AddSelectedLayers {
-							additional_layers: document.graphene_document.intersects_quad_root(quad, font_cache),
+							additional_layers: document.document_legacy.intersects_quad_root(quad, font_cache),
 						}
 						.into(),
 					);
@@ -738,7 +762,7 @@ impl Fsm for SelectToolFsmState {
 							&mut bounding_box_overlays.opposite_pivot,
 							&selected,
 							responses,
-							&document.graphene_document,
+							&document.document_legacy,
 						);
 
 						selected.revert_operation();
@@ -769,6 +793,8 @@ impl Fsm for SelectToolFsmState {
 					self
 				}
 				(_, SetPivot { position }) => {
+					responses.push_back(DocumentMessage::StartTransaction.into());
+
 					let pos: Option<DVec2> = position.into();
 					tool_data.pivot.set_normalized_position(pos.unwrap(), document, font_cache, responses);
 
@@ -929,7 +955,7 @@ impl Fsm for SelectToolFsmState {
 
 impl SelectToolData {
 	/// Duplicates the currently dragging layers. Called when Alt is pressed and the layers have not yet been duplicated.
-	fn start_duplicates(&mut self, document: &DocumentMessageHandler, document_id: u64, responses: &mut VecDeque<Message>) {
+	fn start_duplicates(&mut self, document: &DocumentMessageHandler, responses: &mut VecDeque<Message>) {
 		responses.push_back(DocumentMessage::DeselectAllLayers.into());
 
 		self.not_duplicated_layers = Some(self.layers_dragging.clone());
@@ -947,7 +973,7 @@ impl SelectToolData {
 
 			// Copy the layers.
 			// Not using the Copy message allows us to retrieve the ids of the new layers to initialize the drag.
-			let mut layer = match document.graphene_document.layer(layer_path) {
+			let layer = match document.document_legacy.layer(layer_path) {
 				Ok(layer) => layer.clone(),
 				Err(e) => {
 					warn!("Could not access selected layer {:?}: {:?}", layer_path, e);
@@ -957,20 +983,6 @@ impl SelectToolData {
 
 			let layer_metadata = *document.layer_metadata(layer_path);
 			*layer_path.last_mut().unwrap() = generate_uuid();
-
-			let image_data = if let LayerDataType::Imaginate(imaginate) = &mut layer.data {
-				imaginate.blob_url = None;
-
-				imaginate.image_data.as_ref().map(|data| {
-					vec![FrontendImageData {
-						path: layer_path.clone(),
-						image_data: data.image_data.clone(),
-						mime: imaginate.mime.clone(),
-					}]
-				})
-			} else {
-				None
-			};
 
 			responses.push_back(
 				Operation::InsertLayer {
@@ -988,10 +1000,6 @@ impl SelectToolData {
 				}
 				.into(),
 			);
-
-			if let Some(image_data) = image_data {
-				responses.push_back(FrontendMessage::UpdateImageData { image_data, document_id }.into());
-			}
 		}
 	}
 

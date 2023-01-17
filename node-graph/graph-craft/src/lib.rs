@@ -5,6 +5,4 @@ pub mod document;
 pub mod proto;
 
 pub mod executor;
-
-#[cfg(feature = "gpu")]
-pub mod gpu;
+pub mod imaginate_input;

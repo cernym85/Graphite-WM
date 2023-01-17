@@ -77,8 +77,6 @@
 
 <style lang="scss">
 .layer-tree {
-	min-height: 0;
-
 	// Options bar
 	.options-bar {
 		height: 32px;
@@ -279,6 +277,7 @@ import {
 	type LayerTypeData,
 	type LayerPanelEntry,
 	defaultWidgetLayout,
+	patchWidgetLayout,
 	UpdateDocumentLayerDetails,
 	UpdateDocumentLayerTreeStructureJs,
 	UpdateLayerTreeOptionsLayout,
@@ -525,7 +524,7 @@ export default defineComponent({
 		});
 
 		this.editor.subscriptions.subscribeJsMessage(UpdateLayerTreeOptionsLayout, (updateLayerTreeOptionsLayout) => {
-			this.layerTreeOptionsLayout = updateLayerTreeOptionsLayout;
+			patchWidgetLayout(this.layerTreeOptionsLayout, updateLayerTreeOptionsLayout);
 		});
 
 		this.editor.subscriptions.subscribeJsMessage(UpdateDocumentLayerDetails, (updateDocumentLayerDetails) => {

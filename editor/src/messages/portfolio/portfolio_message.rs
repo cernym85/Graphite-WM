@@ -2,8 +2,10 @@ use super::utility_types::ImaginateServerStatus;
 use crate::messages::portfolio::document::utility_types::clipboards::Clipboard;
 use crate::messages::prelude::*;
 
-use graphene::layers::{imaginate_layer::ImaginateStatus, text_layer::Font};
-use graphene::LayerId;
+use document_legacy::layers::text_layer::Font;
+use document_legacy::LayerId;
+use graph_craft::document::NodeId;
+use graph_craft::imaginate_input::ImaginateStatus;
 
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +45,9 @@ pub enum PortfolioMessage {
 	Cut {
 		clipboard: Clipboard,
 	},
+	DeleteDocument {
+		document_id: u64,
+	},
 	DestroyAllDocuments,
 	FontLoaded {
 		font_family: String,
@@ -52,22 +57,20 @@ pub enum PortfolioMessage {
 		is_default: bool,
 	},
 	ImaginateCheckServerStatus,
-	ImaginateSetBlobUrl {
-		document_id: u64,
-		layer_path: Vec<LayerId>,
-		blob_url: String,
-		resolution: (f64, f64),
-	},
 	ImaginateSetGeneratingStatus {
 		document_id: u64,
-		path: Vec<LayerId>,
+		layer_path: Vec<LayerId>,
+		node_path: Vec<NodeId>,
 		percent: Option<f64>,
 		status: ImaginateStatus,
 	},
 	ImaginateSetImageData {
 		document_id: u64,
 		layer_path: Vec<LayerId>,
+		node_path: Vec<NodeId>,
 		image_data: Vec<u8>,
+		width: u32,
+		height: u32,
 	},
 	ImaginateSetServerStatus {
 		status: ImaginateServerStatus,
@@ -114,6 +117,7 @@ pub enum PortfolioMessage {
 		layer_path: Vec<LayerId>,
 		image_data: Vec<u8>,
 		size: (u32, u32),
+		imaginate_node: Option<Vec<NodeId>>,
 	},
 	SelectDocument {
 		document_id: u64,

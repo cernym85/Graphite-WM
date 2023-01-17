@@ -24,7 +24,7 @@ module.exports = {
 						crateDirectory: path.resolve(__dirname, "wasm"),
 						// Remove when this issue is resolved: https://github.com/wasm-tool/wasm-pack-plugin/issues/93
 						outDir: path.resolve(__dirname, "wasm/pkg"),
-						watchDirectories: ["../editor", "../graphene", "../proc-macros", "../node-graph"].map((folder) => path.resolve(__dirname, folder)),
+						watchDirectories: ["../editor", "../document-legacy", "../proc-macros", "../node-graph"].map((folder) => path.resolve(__dirname, folder)),
 					})
 			)
 			.end();
@@ -86,11 +86,17 @@ function formatThirdPartyLicenses(jsLicenses) {
 
 		if (rustLicenses === undefined) {
 			// This is probably caused by cargo about not being installed
-			console.error(`
-Could not run \`cargo about\`, which is required to generate license information.
-To install cargo-about on your system, you can run:
-    cargo install cargo-about
-License information is required on production builds. Aborting.`);
+			console.error(
+				`
+				Could not run \`cargo about\`, which is required to generate license information.
+				To install cargo-about on your system, you can run \`cargo install cargo-about\`.
+				License information is required on production builds. Aborting.
+				`
+					.trim()
+					.split("\n")
+					.map((line) => line.trim())
+					.join("\n")
+			);
 			process.exit(1);
 		}
 	}

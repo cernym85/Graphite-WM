@@ -1,4 +1,4 @@
-use graphene::color::Color;
+use document_legacy::color::Color;
 
 // Viewport
 pub const VIEWPORT_ZOOM_WHEEL_RATE: f64 = (1. / 600.) * 3.;
@@ -54,6 +54,7 @@ pub const BOUNDS_ROTATE_THRESHOLD: f64 = 20.;
 // Path tool
 pub const MANIPULATOR_GROUP_MARKER_SIZE: f64 = 5.;
 pub const SELECTION_THRESHOLD: f64 = 10.;
+pub const HIDE_HANDLE_DISTANCE: f64 = 3.;
 
 // Pen tool
 pub const CREATE_CURVE_THRESHOLD: f64 = 5.;
@@ -74,7 +75,7 @@ pub const DEFAULT_FONT_FAMILY: &str = "Merriweather";
 pub const DEFAULT_FONT_STYLE: &str = "Normal (400)";
 
 // Document
-pub const GRAPHITE_DOCUMENT_VERSION: &str = "0.0.15"; // Remember to save a simple document and replace the test file `graphite-test-document.graphite`
+pub const GRAPHITE_DOCUMENT_VERSION: &str = "0.0.16"; // Remember to save a simple document and replace the test file `graphite-test-document.graphite`
 pub const DEFAULT_DOCUMENT_NAME: &str = "Untitled Document";
 pub const FILE_SAVE_SUFFIX: &str = ".graphite";
 pub const MAX_UNDO_HISTORY_LEN: usize = 100; // TODO: Add this to user preferences

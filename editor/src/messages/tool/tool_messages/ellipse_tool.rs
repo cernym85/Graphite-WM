@@ -7,8 +7,8 @@ use crate::messages::tool::common_functionality::resize::Resize;
 use crate::messages::tool::utility_types::{EventToMessageMap, Fsm, ToolActionHandlerData, ToolMetadata, ToolTransition, ToolType};
 use crate::messages::tool::utility_types::{HintData, HintGroup, HintInfo};
 
-use graphene::layers::style;
-use graphene::Operation;
+use document_legacy::layers::style;
+use document_legacy::Operation;
 
 use glam::DAffine2;
 use serde::{Deserialize, Serialize};
@@ -159,7 +159,7 @@ impl Fsm for EllipseToolFsmState {
 					state
 				}
 				(Drawing, DragStop) => {
-					match shape_data.drag_start.distance(input.mouse.position) <= DRAG_THRESHOLD {
+					match shape_data.viewport_drag_start(document).distance(input.mouse.position) <= DRAG_THRESHOLD {
 						true => responses.push_back(DocumentMessage::AbortTransaction.into()),
 						false => responses.push_back(DocumentMessage::CommitTransaction.into()),
 					}

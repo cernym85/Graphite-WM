@@ -3,11 +3,13 @@ use crate::messages::portfolio::document::utility_types::layer_panel::LayerMetad
 use crate::messages::portfolio::document::utility_types::misc::{AlignAggregate, AlignAxis, FlipAxis};
 use crate::messages::prelude::*;
 
-use graphene::boolean_ops::BooleanOperation as BooleanOperationType;
-use graphene::layers::blend_mode::BlendMode;
-use graphene::layers::style::ViewMode;
-use graphene::LayerId;
-use graphene::Operation as DocumentOperation;
+use document_legacy::boolean_ops::BooleanOperation as BooleanOperationType;
+use document_legacy::document::Document as DocumentLegacy;
+use document_legacy::layers::blend_mode::BlendMode;
+use document_legacy::layers::style::ViewMode;
+use document_legacy::LayerId;
+use document_legacy::Operation as DocumentOperation;
+use graph_craft::document::NodeId;
 use serde::{Deserialize, Serialize};
 
 #[remain::sorted]
@@ -45,7 +47,12 @@ pub enum DocumentMessage {
 		axis: AlignAxis,
 		aggregate: AlignAggregate,
 	},
+	BackupDocument {
+		document: DocumentLegacy,
+		layer_metadata: HashMap<Vec<LayerId>, LayerMetadata>,
+	},
 	BooleanOperation(BooleanOperationType),
+	ClearLayerTree,
 	CommitTransaction,
 	CreateEmptyFolder {
 		container_path: Vec<LayerId>,
@@ -78,8 +85,6 @@ pub enum DocumentMessage {
 	},
 	FrameClear,
 	GroupSelectedLayers,
-	ImaginateGenerate,
-	ImaginateTerminate,
 	LayerChanged {
 		affected_layer_path: Vec<LayerId>,
 	},
@@ -91,8 +96,19 @@ pub enum DocumentMessage {
 	MoveSelectedManipulatorPoints {
 		layer_path: Vec<LayerId>,
 		delta: (f64, f64),
+		mirror_distance: bool,
 	},
 	NodeGraphFrameGenerate,
+	NodeGraphFrameImaginate {
+		imaginate_node: Vec<NodeId>,
+	},
+	NodeGraphFrameImaginateRandom {
+		imaginate_node: Vec<NodeId>,
+	},
+	NodeGraphFrameImaginateTerminate {
+		layer_path: Vec<LayerId>,
+		node_path: Vec<NodeId>,
+	},
 	NudgeSelectedLayers {
 		delta_x: f64,
 		delta_y: f64,
@@ -168,10 +184,10 @@ pub enum DocumentMessage {
 	},
 	ToggleSelectedHandleMirroring {
 		layer_path: Vec<LayerId>,
-		toggle_distance: bool,
 		toggle_angle: bool,
 	},
 	Undo,
+	UndoFinished,
 	UngroupLayers {
 		folder_path: Vec<LayerId>,
 	},

@@ -18,7 +18,7 @@
 			</LayoutRow>
 			<PopoverButton :icon="'VerticalEllipsis'">
 				<TextLabel :bold="true">Panel Options</TextLabel>
-				<TextLabel :multiline="true">The contents of this popover menu are coming soon</TextLabel>
+				<TextLabel :multiline="true">Coming soon</TextLabel>
 			</PopoverButton>
 		</LayoutRow>
 		<LayoutCol class="panel-body">
@@ -168,7 +168,6 @@
 		background: var(--color-3-darkgray);
 		flex: 1 1 100%;
 		flex-direction: column;
-		min-height: 0;
 
 		.empty-panel {
 			background: var(--color-2-mildblack);

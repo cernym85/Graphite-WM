@@ -7,7 +7,7 @@ use crate::messages::tool::common_functionality::resize::Resize;
 use crate::messages::tool::utility_types::{EventToMessageMap, Fsm, ToolActionHandlerData, ToolMetadata, ToolTransition, ToolType};
 use crate::messages::tool::utility_types::{HintData, HintGroup, HintInfo};
 
-use graphene::Operation;
+use document_legacy::Operation;
 
 use glam::DAffine2;
 use serde::{Deserialize, Serialize};
@@ -134,14 +134,46 @@ impl Fsm for NodeGraphToolFsmState {
 				(Ready, DragStart) => {
 					shape_data.start(responses, document, input.mouse.position, font_cache);
 					responses.push_back(DocumentMessage::StartTransaction.into());
+					responses.push_back(NodeGraphMessage::SetDrawing { new_drawing: true }.into());
 					shape_data.path = Some(document.get_path_for_new_layer());
 					responses.push_back(DocumentMessage::DeselectAllLayers.into());
+
+					use graph_craft::{document::*, generic, proto::*};
+
+					let network = NodeNetwork {
+						inputs: vec![0],
+						output: 1,
+						nodes: [
+							(
+								0,
+								DocumentNode {
+									name: "Input".into(),
+									inputs: vec![NodeInput::Network],
+									implementation: DocumentNodeImplementation::Unresolved(NodeIdentifier::new("graphene_core::ops::IdNode", &[generic!("T")])),
+									metadata: DocumentNodeMetadata { position: (8, 4).into() },
+								},
+							),
+							(
+								1,
+								DocumentNode {
+									name: "Output".into(),
+									inputs: vec![NodeInput::Node(0)],
+									implementation: DocumentNodeImplementation::Unresolved(NodeIdentifier::new("graphene_core::ops::IdNode", &[generic!("T")])),
+									metadata: DocumentNodeMetadata { position: (20, 4).into() },
+								},
+							),
+						]
+						.into_iter()
+						.collect(),
+						..Default::default()
+					};
 
 					responses.push_back(
 						Operation::AddNodeGraphFrame {
 							path: shape_data.path.clone().unwrap(),
 							insert_index: -1,
 							transform: DAffine2::ZERO.to_cols_array(),
+							network,
 						}
 						.into(),
 					);
@@ -156,17 +188,19 @@ impl Fsm for NodeGraphToolFsmState {
 					state
 				}
 				(Drawing, DragStop) => {
-					match shape_data.drag_start.distance(input.mouse.position) <= DRAG_THRESHOLD {
+					match shape_data.viewport_drag_start(document).distance(input.mouse.position) <= DRAG_THRESHOLD {
 						true => responses.push_back(DocumentMessage::AbortTransaction.into()),
 						false => responses.push_back(DocumentMessage::CommitTransaction.into()),
 					}
 
+					responses.push_back(NodeGraphMessage::SetDrawing { new_drawing: false }.into());
 					shape_data.cleanup(responses);
 
 					Ready
 				}
 				(Drawing, Abort) => {
 					responses.push_back(DocumentMessage::AbortTransaction.into());
+					responses.push_back(NodeGraphMessage::SetDrawing { new_drawing: false }.into());
 
 					shape_data.cleanup(responses);
 

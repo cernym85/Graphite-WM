@@ -1,6 +1,6 @@
 use crate::svg_drawing::*;
 
-use bezier_rs::{Bezier, ComputeType, ManipulatorGroup, Subpath};
+use bezier_rs::{Bezier, ComputeType, ManipulatorGroup, ProjectionOptions, Subpath};
 
 use glam::DVec2;
 use wasm_bindgen::prelude::*;
@@ -12,8 +12,8 @@ pub struct WasmSubpath(Subpath);
 #[wasm_bindgen]
 impl WasmSubpath {
 	/// Expects js_points to be an unbounded list of triples, where each item is a tuple of floats.
-	pub fn from_triples(js_points: &JsValue, closed: bool) -> WasmSubpath {
-		let point_triples: Vec<[Option<DVec2>; 3]> = js_points.into_serde().unwrap();
+	pub fn from_triples(js_points: JsValue, closed: bool) -> WasmSubpath {
+		let point_triples: Vec<[Option<DVec2>; 3]> = serde_wasm_bindgen::from_value(js_points).unwrap();
 		let manipulator_groups = point_triples
 			.into_iter()
 			.map(|point_triple| ManipulatorGroup {
@@ -53,6 +53,26 @@ impl WasmSubpath {
 		subpath_svg
 	}
 
+	pub fn insert(&self, t: f64, compute_type: String) -> String {
+		let mut subpath = self.0.clone();
+		let point = match compute_type.as_str() {
+			"Euclidean" => {
+				let parameter = ComputeType::Euclidean(t);
+				subpath.insert(parameter);
+				self.0.evaluate(parameter)
+			}
+			"Parametric" => {
+				let parameter = ComputeType::Parametric(t);
+				subpath.insert(parameter);
+				self.0.evaluate(parameter)
+			}
+			_ => panic!("Unexpected ComputeType string: '{}'", compute_type),
+		};
+		let point_text = draw_circle(point, 4., RED, 1.5, WHITE);
+
+		wrap_svg_tag(format!("{}{}", WasmSubpath(subpath).to_default_svg(), point_text))
+	}
+
 	pub fn length(&self) -> String {
 		let length_text = draw_text(format!("Length: {:.2}", self.0.length(None)), 5., 193., BLACK);
 		wrap_svg_tag(format!("{}{}", self.to_default_svg(), length_text))
@@ -68,8 +88,17 @@ impl WasmSubpath {
 		wrap_svg_tag(format!("{}{}", self.to_default_svg(), point_text))
 	}
 
-	pub fn intersect_line_segment(&self, js_points: &JsValue) -> String {
-		let points: [DVec2; 2] = js_points.into_serde().unwrap();
+	pub fn project(&self, x: f64, y: f64) -> String {
+		let (segment_index, projected_t) = self.0.project(DVec2::new(x, y), ProjectionOptions::default()).unwrap();
+		let projected_point = self.0.evaluate(ComputeType::Parametric((segment_index as f64 + projected_t) / (self.0.len_segments() as f64)));
+
+		let subpath_svg = self.to_default_svg();
+		let content = format!("{subpath_svg}{}", draw_line(projected_point.x, projected_point.y, x, y, RED, 1.),);
+		wrap_svg_tag(content)
+	}
+
+	pub fn intersect_line_segment(&self, js_points: JsValue) -> String {
+		let points: [DVec2; 2] = serde_wasm_bindgen::from_value(js_points).unwrap();
 		let line = Bezier::from_linear_dvec2(points[0], points[1]);
 
 		let subpath_svg = self.to_default_svg();
@@ -97,8 +126,8 @@ impl WasmSubpath {
 		wrap_svg_tag(format!("{subpath_svg}{line_svg}{intersections_svg}"))
 	}
 
-	pub fn intersect_quadratic_segment(&self, js_points: &JsValue) -> String {
-		let points: [DVec2; 3] = js_points.into_serde().unwrap();
+	pub fn intersect_quadratic_segment(&self, js_points: JsValue) -> String {
+		let points: [DVec2; 3] = serde_wasm_bindgen::from_value(js_points).unwrap();
 		let line = Bezier::from_quadratic_dvec2(points[0], points[1], points[2]);
 
 		let subpath_svg = self.to_default_svg();
@@ -126,8 +155,8 @@ impl WasmSubpath {
 		wrap_svg_tag(format!("{subpath_svg}{line_svg}{intersections_svg}"))
 	}
 
-	pub fn intersect_cubic_segment(&self, js_points: &JsValue) -> String {
-		let points: [DVec2; 4] = js_points.into_serde().unwrap();
+	pub fn intersect_cubic_segment(&self, js_points: JsValue) -> String {
+		let points: [DVec2; 4] = serde_wasm_bindgen::from_value(js_points).unwrap();
 		let line = Bezier::from_cubic_dvec2(points[0], points[1], points[2], points[3]);
 
 		let subpath_svg = self.to_default_svg();

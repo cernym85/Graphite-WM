@@ -83,6 +83,13 @@ body,
 	user-select: none;
 }
 
+// The default value of `auto` from the CSS spec is a footgun with flexbox layouts:
+// https://stackoverflow.com/questions/36247140/why-dont-flex-items-shrink-past-content-size
+* {
+	min-width: 0;
+	min-height: 0;
+}
+
 html,
 body,
 input,
@@ -237,6 +244,7 @@ import { createLocalizationManager } from "@/io-managers/localization";
 import { createPanicManager } from "@/io-managers/panic";
 import { createPersistenceManager } from "@/io-managers/persistence";
 import { createDialogState, type DialogState } from "@/state-providers/dialog";
+import { createDocumentState, type DocumentState } from "@/state-providers/document";
 import { createFontsState, type FontsState } from "@/state-providers/fonts";
 import { createFullscreenState, type FullscreenState } from "@/state-providers/fullscreen";
 import { createNodeGraphState, type NodeGraphState } from "@/state-providers/node-graph";
@@ -276,6 +284,7 @@ declare module "@vue/runtime-core" {
 		portfolio: PortfolioState;
 		workspace: WorkspaceState;
 		nodeGraph: NodeGraphState;
+		document: DocumentState;
 	}
 }
 
@@ -298,6 +307,7 @@ export default defineComponent({
 			portfolio: createPortfolioState(editor),
 			workspace: createWorkspaceState(editor),
 			nodeGraph: createNodeGraphState(editor),
+			document: createDocumentState(editor),
 		};
 	},
 	mounted() {

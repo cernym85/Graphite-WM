@@ -1,12 +1,14 @@
 use super::{node_properties, FrontendGraphDataType, FrontendNodeType};
-use crate::messages::layout::utility_types::layout_widget::{LayoutGroup, Widget, WidgetHolder};
-use crate::messages::layout::utility_types::widgets::label_widgets::TextLabel;
+use crate::messages::layout::utility_types::layout_widget::LayoutGroup;
 
 use graph_craft::concrete;
-use graph_craft::document::value::TaggedValue;
+use graph_craft::document::value::*;
 use graph_craft::document::{DocumentNode, NodeId, NodeInput};
+use graph_craft::imaginate_input::ImaginateSamplingMethod;
 use graph_craft::proto::{NodeIdentifier, Type};
 use graphene_core::raster::Image;
+
+use std::collections::VecDeque;
 
 pub struct DocumentInputType {
 	pub name: &'static str,
@@ -30,13 +32,21 @@ impl DocumentInputType {
 	}
 }
 
+pub struct NodePropertiesContext<'a> {
+	pub persistent_data: &'a crate::messages::portfolio::utility_types::PersistentData,
+	pub document: &'a document_legacy::document::Document,
+	pub responses: &'a mut VecDeque<crate::messages::prelude::Message>,
+	pub layer_path: &'a [document_legacy::LayerId],
+	pub nested_path: &'a [NodeId],
+}
+
 pub struct DocumentNodeType {
 	pub name: &'static str,
 	pub category: &'static str,
 	pub identifier: NodeIdentifier,
 	pub inputs: &'static [DocumentInputType],
 	pub outputs: &'static [FrontendGraphDataType],
-	pub properties: fn(&DocumentNode, NodeId) -> Vec<LayoutGroup>,
+	pub properties: fn(&DocumentNode, NodeId, &mut NodePropertiesContext) -> Vec<LayoutGroup>,
 }
 
 // TODO: Dynamic node library
@@ -51,14 +61,7 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 			default: NodeInput::Node(0),
 		}],
 		outputs: &[FrontendGraphDataType::General],
-		properties: |_document_node, _node_id| {
-			vec![LayoutGroup::Row {
-				widgets: vec![WidgetHolder::new(Widget::TextLabel(TextLabel {
-					value: "The identity node simply returns the input".to_string(),
-					..Default::default()
-				}))],
-			}]
-		},
+		properties: |_document_node, _node_id, _context| node_properties::string_properties("The identity node simply returns the input".to_string()),
 	},
 	DocumentNodeType {
 		name: "Input",
@@ -70,7 +73,7 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 			default: NodeInput::Network,
 		}],
 		outputs: &[FrontendGraphDataType::Raster],
-		properties: |_document_node, _node_id| node_properties::string_properties("The input to the graph is the bitmap under the frame".to_string()),
+		properties: node_properties::input_properties,
 	},
 	DocumentNodeType {
 		name: "Output",
@@ -82,7 +85,7 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 			default: NodeInput::value(TaggedValue::Image(Image::empty()), true),
 		}],
 		outputs: &[],
-		properties: |_document_node, _node_id| node_properties::string_properties("The output to the graph is rendered in the frame".to_string()),
+		properties: |_document_node, _node_id, _context| node_properties::string_properties("The graph's output is rendered into the frame".to_string()),
 	},
 	DocumentNodeType {
 		name: "Grayscale",
@@ -92,6 +95,7 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 		outputs: &[FrontendGraphDataType::Raster],
 		properties: node_properties::no_properties,
 	},
+	#[cfg(feature = "gpu")]
 	DocumentNodeType {
 		name: "GpuImage",
 		category: "Image Adjustments",
@@ -101,11 +105,56 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 			DocumentInputType {
 				name: "Path",
 				data_type: FrontendGraphDataType::Text,
-				default: NodeInput::value(TaggedValue::String(String::new()), true),
+				default: NodeInput::value(TaggedValue::String(String::new()), false),
 			},
 		],
 		outputs: &[FrontendGraphDataType::Raster],
 		properties: node_properties::gpu_map_properties,
+	},
+	#[cfg(feature = "quantization")]
+	DocumentNodeType {
+		name: "QuantizeImage",
+		category: "Image Adjustments",
+		identifier: NodeIdentifier::new("graphene_std::quantization::GenerateQuantizationNode", &[concrete!("&TypeErasedNode")]),
+		inputs: &[
+			DocumentInputType {
+				name: "Image",
+				data_type: FrontendGraphDataType::Raster,
+				default: NodeInput::value(TaggedValue::Image(Image::empty()), true),
+			},
+			DocumentInputType {
+				name: "samples",
+				data_type: FrontendGraphDataType::Number,
+				default: NodeInput::value(TaggedValue::U32(100), false),
+			},
+			DocumentInputType {
+				name: "Fn index",
+				data_type: FrontendGraphDataType::Number,
+				default: NodeInput::value(TaggedValue::U32(0), false),
+			},
+		],
+		outputs: &[FrontendGraphDataType::Raster],
+		properties: node_properties::quantize_properties,
+	},
+	DocumentNodeType {
+		name: "Gaussian Blur",
+		category: "Image Filters",
+		identifier: NodeIdentifier::new("graphene_core::raster::BlurNode", &[]),
+		inputs: &[
+			DocumentInputType::new("Image", TaggedValue::Image(Image::empty()), true),
+			DocumentInputType::new("Radius", TaggedValue::U32(3), false),
+			DocumentInputType::new("Sigma", TaggedValue::F64(1.), false),
+		],
+		outputs: &[FrontendGraphDataType::Raster],
+		properties: node_properties::blur_image_properties,
+	},
+	DocumentNodeType {
+		name: "Cache",
+		category: "Structural",
+		identifier: NodeIdentifier::new("graphene_std::memo::CacheNode", &[concrete!("Image")]),
+		inputs: &[DocumentInputType::new("Image", TaggedValue::Image(Image::empty()), true)],
+		outputs: &[FrontendGraphDataType::Raster],
+		properties: node_properties::no_properties,
 	},
 	DocumentNodeType {
 		name: "Invert RGB",
@@ -184,6 +233,7 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 		outputs: &[FrontendGraphDataType::Raster],
 		properties: node_properties::exposure_properties,
 	},
+	IMAGINATE_NODE,
 	DocumentNodeType {
 		name: "Add",
 		category: "Math",
@@ -228,31 +278,11 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 		category: "Vector",
 		identifier: NodeIdentifier::new("graphene_std::vector::generator_nodes::TransformSubpathNode", &[]),
 		inputs: &[
-			DocumentInputType {
-				name: "Subpath",
-				data_type: FrontendGraphDataType::Subpath,
-				default: NodeInput::value(TaggedValue::Subpath(Subpath::new()), true),
-			},
-			DocumentInputType {
-				name: "Translation",
-				data_type: FrontendGraphDataType::Vector,
-				default: NodeInput::value(TaggedValue::DVec2(DVec2::ZERO), false),
-			},
-			DocumentInputType {
-				name: "Rotation",
-				data_type: FrontendGraphDataType::Number,
-				default: NodeInput::value(TaggedValue::F64(0.), false),
-			},
-			DocumentInputType {
-				name: "Scale",
-				data_type: FrontendGraphDataType::Vector,
-				default: NodeInput::value(TaggedValue::DVec2(DVec2::ONE), false),
-			},
-			DocumentInputType {
-				name: "Skew",
-				data_type: FrontendGraphDataType::Vector,
-				default: NodeInput::value(TaggedValue::DVec2(DVec2::ZERO), false),
-			},
+			DocumentInputType::new("Subpath", TaggedValue::Subpath(Subpath::empty()), true),
+			DocumentInputType::new("Translation", TaggedValue::DVec2(DVec2::ZERO), false),
+			DocumentInputType::new("Rotation", TaggedValue::F64(0.), false),
+			DocumentInputType::new("Scale", TaggedValue::DVec2(DVec2::ONE), false),
+			DocumentInputType::new("Skew", TaggedValue::DVec2(DVec2::ZERO), false),
 		],
 		outputs: &[FrontendGraphDataType::Subpath],
 		properties: node_properties::transform_properties,
@@ -262,21 +292,43 @@ static DOCUMENT_NODE_TYPES: &[DocumentNodeType] = &[
 		category: "Vector",
 		identifier: NodeIdentifier::new("graphene_std::vector::generator_nodes::BlitSubpath", &[]),
 		inputs: &[
-			DocumentInputType {
-				name: "Image",
-				data_type: FrontendGraphDataType::Raster,
-				default: NodeInput::value(TaggedValue::Image(Image::empty()), true),
-			},
-			DocumentInputType {
-				name: "Subpath",
-				data_type: FrontendGraphDataType::Subpath,
-				default: NodeInput::value(TaggedValue::Subpath(Subpath::new()), true),
-			},
+			DocumentInputType::new("Image", TaggedValue::Image(Image::empty()), true),
+			DocumentInputType::new("Subpath", TaggedValue::Subpath(Subpath::empty()), true),
 		],
 		outputs: &[FrontendGraphDataType::Raster],
 		properties: node_properties::no_properties,
 	},*/
 ];
+
+pub const IMAGINATE_NODE: DocumentNodeType = DocumentNodeType {
+	name: "Imaginate",
+	category: "Image Synthesis",
+	identifier: NodeIdentifier::new("graphene_std::raster::ImaginateNode", &[concrete!("&TypeErasedNode")]),
+	inputs: &[
+		DocumentInputType::new("Input Image", TaggedValue::Image(Image::empty()), true),
+		DocumentInputType::new("Seed", TaggedValue::F64(0.), false),
+		DocumentInputType::new("Resolution", TaggedValue::OptionalDVec2(None), false),
+		DocumentInputType::new("Samples", TaggedValue::F64(30.), false),
+		DocumentInputType::new("Sampling Method", TaggedValue::ImaginateSamplingMethod(ImaginateSamplingMethod::EulerA), false),
+		DocumentInputType::new("Prompt Guidance", TaggedValue::F64(10.), false),
+		DocumentInputType::new("Prompt", TaggedValue::String(String::new()), false),
+		DocumentInputType::new("Negative Prompt", TaggedValue::String(String::new()), false),
+		DocumentInputType::new("Adapt Input Image", TaggedValue::Bool(false), false),
+		DocumentInputType::new("Image Creativity", TaggedValue::F64(66.), false),
+		DocumentInputType::new("Masking Layer", TaggedValue::LayerPath(None), false),
+		DocumentInputType::new("Inpaint", TaggedValue::Bool(true), false),
+		DocumentInputType::new("Mask Blur", TaggedValue::F64(4.), false),
+		DocumentInputType::new("Mask Starting Fill", TaggedValue::ImaginateMaskStartingFill(ImaginateMaskStartingFill::Fill), false),
+		DocumentInputType::new("Improve Faces", TaggedValue::Bool(false), false),
+		DocumentInputType::new("Tiling", TaggedValue::Bool(false), false),
+		// Non-user status (is document input the right way to do this?)
+		DocumentInputType::new("Cached Data", TaggedValue::RcImage(None), false),
+		DocumentInputType::new("Percent Complete", TaggedValue::F64(0.), false),
+		DocumentInputType::new("Status", TaggedValue::ImaginateStatus(ImaginateStatus::Idle), false),
+	],
+	outputs: &[FrontendGraphDataType::Raster],
+	properties: node_properties::imaginate_properties,
+};
 
 pub fn resolve_document_node_type(name: &str) -> Option<&DocumentNodeType> {
 	DOCUMENT_NODE_TYPES.iter().find(|node| node.name == name)

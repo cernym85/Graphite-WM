@@ -9,7 +9,7 @@ use crate::messages::tool::common_functionality::snapping::SnapManager;
 use crate::messages::tool::utility_types::{EventToMessageMap, Fsm, ToolActionHandlerData, ToolMetadata, ToolTransition, ToolType};
 use crate::messages::tool::utility_types::{HintData, HintGroup, HintInfo};
 
-use graphene::intersection::Quad;
+use document_legacy::intersection::Quad;
 use graphene_std::vector::consts::ManipulatorType;
 
 use glam::DVec2;
@@ -131,7 +131,6 @@ struct PathToolData {
 
 	drag_start_pos: DVec2,
 	alt_debounce: bool,
-	shift_debounce: bool,
 }
 
 impl Fsm for PathToolFsmState {
@@ -151,7 +150,7 @@ impl Fsm for PathToolFsmState {
 				(_, PathToolMessage::SelectionChanged) => {
 					// Set the previously selected layers to invisible
 					for layer_path in document.all_layers() {
-						tool_data.overlay_renderer.layer_overlay_visibility(&document.graphene_document, layer_path.to_vec(), false, responses);
+						tool_data.overlay_renderer.layer_overlay_visibility(&document.document_legacy, layer_path.to_vec(), false, responses);
 					}
 
 					// Set the newly targeted layers to visible
@@ -159,7 +158,7 @@ impl Fsm for PathToolFsmState {
 					tool_data.shape_editor.set_selected_layers(layer_paths);
 					// Render the new overlays
 					for layer_path in tool_data.shape_editor.selected_layers() {
-						tool_data.overlay_renderer.render_subpath_overlays(&document.graphene_document, layer_path.to_vec(), responses);
+						tool_data.overlay_renderer.render_subpath_overlays(&document.document_legacy, layer_path.to_vec(), responses);
 					}
 
 					// This can happen in any state (which is why we return self)
@@ -169,7 +168,7 @@ impl Fsm for PathToolFsmState {
 					// When the document has moved / needs to be redraw, re-render the overlays
 					// TODO the overlay system should probably receive this message instead of the tool
 					for layer_path in document.selected_visible_layers() {
-						tool_data.overlay_renderer.render_subpath_overlays(&document.graphene_document, layer_path.to_vec(), responses);
+						tool_data.overlay_renderer.render_subpath_overlays(&document.document_legacy, layer_path.to_vec(), responses);
 					}
 
 					self
@@ -182,7 +181,7 @@ impl Fsm for PathToolFsmState {
 					if let Some((mut new_selected, offset)) =
 						tool_data
 							.shape_editor
-							.select_point(&document.graphene_document, input.mouse.position, SELECTION_THRESHOLD, toggle_add_to_selection, responses)
+							.select_point(&document.document_legacy, input.mouse.position, SELECTION_THRESHOLD, toggle_add_to_selection, responses)
 					{
 						responses.push_back(DocumentMessage::StartTransaction.into());
 
@@ -212,7 +211,7 @@ impl Fsm for PathToolFsmState {
 						let selection_size = DVec2::new(2.0, 2.0);
 						// Select shapes directly under our mouse
 						let intersection = document
-							.graphene_document
+							.document_legacy
 							.intersects_quad_root(Quad::from_box([input.mouse.position - selection_size, input.mouse.position + selection_size]), font_cache);
 						if !intersection.is_empty() {
 							if toggle_add_to_selection {
@@ -248,20 +247,16 @@ impl Fsm for PathToolFsmState {
 						tool_data.alt_debounce = alt_pressed;
 						// Only on alt down
 						if alt_pressed {
-							tool_data.shape_editor.toggle_handle_mirroring_on_selected(true, false, responses);
+							tool_data.shape_editor.toggle_handle_mirroring_on_selected(true, responses);
 						}
 					}
 
 					// Determine when shift state changes
 					let shift_pressed = input.keyboard.get(shift_mirror_distance as usize);
-					if shift_pressed != tool_data.shift_debounce {
-						tool_data.shift_debounce = shift_pressed;
-						tool_data.shape_editor.toggle_handle_mirroring_on_selected(false, true, responses);
-					}
 
 					// Move the selected points by the mouse position
 					let snapped_position = tool_data.snap_manager.snap_position(responses, document, input.mouse.position);
-					tool_data.shape_editor.move_selected_points(snapped_position - tool_data.drag_start_pos, responses);
+					tool_data.shape_editor.move_selected_points(snapped_position - tool_data.drag_start_pos, shift_pressed, responses);
 					tool_data.drag_start_pos = snapped_position;
 					PathToolFsmState::Dragging
 				}
@@ -277,15 +272,15 @@ impl Fsm for PathToolFsmState {
 					tool_data.shape_editor.delete_selected_points(responses);
 					responses.push_back(PathToolMessage::SelectionChanged.into());
 					for layer_path in document.all_layers() {
-						tool_data.overlay_renderer.clear_subpath_overlays(&document.graphene_document, layer_path.to_vec(), responses);
+						tool_data.overlay_renderer.clear_subpath_overlays(&document.document_legacy, layer_path.to_vec(), responses);
 					}
 					PathToolFsmState::Ready
 				}
 				(_, PathToolMessage::InsertPoint) => {
 					// First we try and flip the sharpness (if they have clicked on an anchor)
-					if !tool_data.shape_editor.flip_sharp(&document.graphene_document, input.mouse.position, SELECTION_TOLERANCE, responses) {
+					if !tool_data.shape_editor.flip_sharp(&document.document_legacy, input.mouse.position, SELECTION_TOLERANCE, responses) {
 						// If not, then we try and split the path that may have been clicked upon
-						tool_data.shape_editor.split(&document.graphene_document, input.mouse.position, SELECTION_TOLERANCE, responses);
+						tool_data.shape_editor.split(&document.document_legacy, input.mouse.position, SELECTION_TOLERANCE, responses);
 					}
 
 					self
@@ -293,7 +288,7 @@ impl Fsm for PathToolFsmState {
 				(_, PathToolMessage::Abort) => {
 					// TODO Tell overlay manager to remove the overlays
 					for layer_path in document.all_layers() {
-						tool_data.overlay_renderer.clear_subpath_overlays(&document.graphene_document, layer_path.to_vec(), responses);
+						tool_data.overlay_renderer.clear_subpath_overlays(&document.document_legacy, layer_path.to_vec(), responses);
 					}
 					PathToolFsmState::Ready
 				}

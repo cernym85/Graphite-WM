@@ -1,6 +1,5 @@
 use super::utility_functions::{register_artboard_layer_properties, register_artwork_layer_properties};
 use super::utility_types::PropertiesPanelMessageHandlerData;
-use crate::application::generate_uuid;
 use crate::messages::layout::utility_types::layout_widget::{Layout, WidgetLayout};
 use crate::messages::layout::utility_types::misc::LayoutTarget;
 use crate::messages::portfolio::document::properties_panel::utility_functions::apply_transform_operation;
@@ -8,7 +7,8 @@ use crate::messages::portfolio::document::utility_types::misc::TargetDocument;
 use crate::messages::portfolio::utility_types::PersistentData;
 use crate::messages::prelude::*;
 
-use graphene::{LayerId, Operation};
+use document_legacy::layers::layer_info::LayerDataTypeDiscriminant;
+use document_legacy::{LayerId, Operation};
 
 use serde::{Deserialize, Serialize};
 
@@ -40,9 +40,20 @@ impl<'a> MessageHandler<PropertiesPanelMessage, (&PersistentData, PropertiesPane
 				} else {
 					let path = paths.into_iter().next().unwrap();
 					if Some((path.clone(), document)) != self.active_selection {
+						// Update the node graph frame visibility
+						if get_document(document)
+							.layer(&path)
+							.ok()
+							.filter(|layer| LayerDataTypeDiscriminant::from(&layer.data) == LayerDataTypeDiscriminant::NodeGraphFrame)
+							.is_some()
+						{
+							responses.push_back(NodeGraphMessage::OpenNodeGraph { layer_path: path.clone() }.into());
+						} else {
+							responses.push_back(NodeGraphMessage::CloseNodeGraph.into());
+						}
+
 						self.active_selection = Some((path, document));
 						responses.push_back(PropertiesPanelMessage::ResendActiveProperties.into());
-						responses.push_back(NodeGraphMessage::CloseNodeGraph.into());
 					}
 				}
 			}
@@ -61,6 +72,7 @@ impl<'a> MessageHandler<PropertiesPanelMessage, (&PersistentData, PropertiesPane
 					}
 					.into(),
 				);
+				responses.push_back(NodeGraphMessage::CloseNodeGraph.into());
 				self.active_selection = None;
 			}
 			Deactivate => responses.push_back(
@@ -80,7 +92,7 @@ impl<'a> MessageHandler<PropertiesPanelMessage, (&PersistentData, PropertiesPane
 			ModifyFont { font_family, font_style, size } => {
 				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
 
-				responses.push_back(self.create_document_operation(Operation::ModifyFont { path, font_family, font_style, size }));
+				self.create_document_operation(Operation::ModifyFont { path, font_family, font_style, size }, true, responses);
 				responses.push_back(ResendActiveProperties.into());
 			}
 			ModifyTransform { value, transform_op } => {
@@ -89,29 +101,34 @@ impl<'a> MessageHandler<PropertiesPanelMessage, (&PersistentData, PropertiesPane
 
 				let transform = apply_transform_operation(layer, transform_op, value, &persistent_data.font_cache);
 
-				responses.push_back(self.create_document_operation(Operation::SetLayerTransform { path: path.clone(), transform }));
+				self.create_document_operation(Operation::SetLayerTransform { path: path.clone(), transform }, true, responses);
 			}
 			ModifyName { name } => {
 				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(self.create_document_operation(Operation::SetLayerName { path, name }))
+				self.create_document_operation(Operation::SetLayerName { path, name }, true, responses);
+			}
+			ModifyPreserveAspect { preserve_aspect } => {
+				let (layer_path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
+				self.create_document_operation(Operation::SetLayerPreserveAspect { layer_path, preserve_aspect }, true, responses);
 			}
 			ModifyFill { fill } => {
 				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(self.create_document_operation(Operation::SetLayerFill { path, fill }));
+				self.create_document_operation(Operation::SetLayerFill { path, fill }, true, responses);
 			}
 			ModifyStroke { stroke } => {
 				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(self.create_document_operation(Operation::SetLayerStroke { path, stroke }))
+				self.create_document_operation(Operation::SetLayerStroke { path, stroke }, true, responses);
 			}
 			ModifyText { new_text } => {
 				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::SetTextContent { path, new_text }.into())
+				self.create_document_operation(Operation::SetTextContent { path, new_text }, true, responses);
 			}
 			SetPivot { new_position } => {
 				let (layer_path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
 				let position: Option<glam::DVec2> = new_position.into();
 				let pivot = position.unwrap().into();
 
+				responses.push_back(DocumentMessage::StartTransaction.into());
 				responses.push_back(Operation::SetPivot { layer_path, pivot }.into());
 			}
 			CheckSelectedWasUpdated { path } => {
@@ -156,78 +173,6 @@ impl<'a> MessageHandler<PropertiesPanelMessage, (&PersistentData, PropertiesPane
 				}
 				.into(),
 			),
-			SetImaginatePrompt { prompt } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetPrompt { path, prompt }.into());
-			}
-			SetImaginateNegativePrompt { negative_prompt } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetNegativePrompt { path, negative_prompt }.into());
-			}
-			SetImaginateDenoisingStrength { denoising_strength } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetDenoisingStrength { path, denoising_strength }.into());
-			}
-			SetImaginateLayerPath { layer_path } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetLayerPath { path, layer_path }.into());
-			}
-			SetImaginateMaskBlurPx { mask_blur_px } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetMaskBlurPx { path, mask_blur_px }.into());
-			}
-			SetImaginateMaskFillContent { mode } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetMaskFillContent { path, mode }.into());
-			}
-			SetImaginateMaskPaintMode { paint } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetMaskPaintMode { path, paint }.into());
-			}
-			SetImaginateSamples { samples } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetSamples { path, samples }.into());
-			}
-			SetImaginateSamplingMethod { method } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::SetImaginateSamplingMethod { path, method }.into());
-			}
-			SetImaginateScaleFromResolution => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-
-				responses.push_back(Operation::ImaginateSetScaleFromResolution { path }.into());
-			}
-			SetImaginateSeed { seed } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetSeed { path, seed }.into());
-			}
-			SetImaginateSeedRandomize => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				let seed = generate_uuid();
-				responses.push_back(Operation::ImaginateSetSeed { path, seed }.into());
-			}
-			SetImaginateSeedRandomizeAndGenerate => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				let seed = generate_uuid();
-				responses.push_back(Operation::ImaginateSetSeed { path, seed }.into());
-				responses.push_back(DocumentMessage::ImaginateGenerate.into());
-			}
-			SetImaginateCfgScale { cfg_scale } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetCfgScale { path, cfg_scale }.into());
-			}
-			SetImaginateUseImg2Img { use_img2img } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetUseImg2Img { path, use_img2img }.into());
-			}
-			SetImaginateRestoreFaces { restore_faces } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetRestoreFaces { path, restore_faces }.into());
-			}
-			SetImaginateTiling { tiling } => {
-				let (path, _) = self.active_selection.clone().expect("Received update for properties panel with no active layer");
-				responses.push_back(Operation::ImaginateSetTiling { path, tiling }.into());
-			}
 		}
 	}
 
@@ -243,11 +188,24 @@ impl PropertiesPanelMessageHandler {
 		matches!((last_active_path_id, last_modified), (Some(active_last), Some(modified_last)) if active_last == modified_last)
 	}
 
-	fn create_document_operation(&self, operation: Operation) -> Message {
+	fn create_document_operation(&self, operation: Operation, commit_history: bool, responses: &mut VecDeque<Message>) {
 		let (_, target_document) = self.active_selection.as_ref().unwrap();
 		match *target_document {
-			TargetDocument::Artboard => ArtboardMessage::DispatchOperation(Box::new(operation)).into(),
-			TargetDocument::Artwork => DocumentMessage::DispatchOperation(Box::new(operation)).into(),
+			TargetDocument::Artboard => {
+				// Commit history is not respected as the artboard document is not saved in the history system.
+
+				// Dispatch the relevant operation to the artboard document
+				responses.push_back(ArtboardMessage::DispatchOperation(Box::new(operation)).into())
+			}
+			TargetDocument::Artwork => {
+				// Commit to history before the modification
+				if commit_history {
+					responses.push_back(DocumentMessage::StartTransaction.into());
+				}
+
+				// Dispatch the relevant operation to the main document
+				responses.push_back(DocumentMessage::DispatchOperation(Box::new(operation)).into());
+			}
 		}
 	}
 }

@@ -36,7 +36,7 @@
 					v-for="node in nodes"
 					:key="String(node.id)"
 					class="node"
-					:class="{ selected: selected.includes(node.id) }"
+					:class="{ selected: selected.includes(node.id), output: node.output, disabled: node.disabled }"
 					:style="{
 						'--offset-left': (node.position?.x || 0) + (selected.includes(node.id) ? draggingNodes?.roundX || 0 : 0),
 						'--offset-top': (node.position?.y || 0) + (selected.includes(node.id) ? draggingNodes?.roundY || 0 : 0),
@@ -127,6 +127,12 @@
 		margin: 0 4px;
 		flex: 0 0 auto;
 		align-items: center;
+
+		.widget-layout {
+			flex-direction: row;
+			flex-grow: 1;
+			justify-content: space-between;
+		}
 	}
 
 	.graph {
@@ -191,6 +197,19 @@
 				&.selected {
 					border: 1px solid var(--color-e-nearwhite);
 					margin: -1px;
+				}
+
+				&.disabled {
+					background: var(--color-3-darkgray);
+					color: var(--color-a-softgray);
+
+					.icon-label {
+						fill: var(--color-a-softgray);
+					}
+				}
+
+				&.output {
+					outline: 3px solid var(--color-data-vector);
 				}
 
 				.primary {
@@ -300,6 +319,8 @@ import { defineComponent, nextTick } from "vue";
 
 import type { IconName } from "@/utility-functions/icons";
 
+import { UpdateNodeGraphSelection, type FrontendNodeLink } from "@/wasm-communication/messages";
+
 import LayoutCol from "@/components/layout/LayoutCol.vue";
 import LayoutRow from "@/components/layout/LayoutRow.vue";
 import TextButton from "@/components/widgets/buttons/TextButton.vue";
@@ -323,6 +344,7 @@ export default defineComponent({
 			selectIfNotDragged: undefined as undefined | bigint,
 			linkInProgressFromConnector: undefined as HTMLDivElement | undefined,
 			linkInProgressToConnector: undefined as HTMLDivElement | DOMRect | undefined,
+			disconnecting: undefined as { nodeId: bigint; inputIndex: number; linkIndex: number } | undefined,
 			nodeLinkPaths: [] as [string, string][],
 			searchTerm: "",
 			nodeListLocation: undefined as { x: number; y: number } | undefined,
@@ -382,11 +404,21 @@ export default defineComponent({
 		nodes: {
 			immediate: true,
 			async handler() {
+				this.selected = this.selected.filter((id) => this.nodeGraph.state.nodes.find((node) => node.id === id));
 				await this.refreshLinks();
 			},
 		},
 	},
 	methods: {
+		resolveLink(link: FrontendNodeLink, containerBounds: HTMLDivElement): { nodePrimaryOutput: HTMLDivElement | undefined; nodePrimaryInput: HTMLDivElement | undefined } {
+			const connectorIndex = Number(link.linkEndInputIndex);
+
+			const nodePrimaryOutput = (containerBounds.querySelector(`[data-node="${String(link.linkStart)}"] [data-port="output"]`) || undefined) as HTMLDivElement | undefined;
+
+			const nodeInputConnectors = containerBounds.querySelectorAll(`[data-node="${String(link.linkEnd)}"] [data-port="input"]`) || undefined;
+			const nodePrimaryInput = nodeInputConnectors?.[connectorIndex] as HTMLDivElement | undefined;
+			return { nodePrimaryOutput, nodePrimaryInput };
+		},
 		async refreshLinks(): Promise<void> {
 			await nextTick();
 
@@ -394,30 +426,27 @@ export default defineComponent({
 			if (!containerBounds) return;
 
 			const links = this.nodeGraph.state.links;
-			this.nodeLinkPaths = links.flatMap((link) => {
-				const connectorIndex = Number(link.linkEndInputIndex);
-
-				const nodePrimaryOutput = (containerBounds.querySelector(`[data-node="${String(link.linkStart)}"] [data-port="output"]`) || undefined) as HTMLDivElement | undefined;
-
-				const nodeInputConnectors = containerBounds.querySelectorAll(`[data-node="${String(link.linkEnd)}"] [data-port="input"]`) || undefined;
-				const nodePrimaryInput = nodeInputConnectors?.[connectorIndex] as HTMLDivElement | undefined;
-
+			this.nodeLinkPaths = links.flatMap((link, index) => {
+				const { nodePrimaryInput, nodePrimaryOutput } = this.resolveLink(link, containerBounds);
 				if (!nodePrimaryInput || !nodePrimaryOutput) return [];
+				if (this.disconnecting?.linkIndex === index) return [];
+
 				return [this.createWirePath(nodePrimaryOutput, nodePrimaryInput.getBoundingClientRect(), false, false)];
 			});
 		},
 		nodeIcon(nodeName: string): IconName {
 			const iconMap: Record<string, IconName> = {
 				Output: "NodeOutput",
+				Imaginate: "NodeImaginate",
 				"Hue Shift Image": "NodeColorCorrection",
 				"Brighten Image": "NodeColorCorrection",
 				"Grayscale Image": "NodeColorCorrection",
 			};
 			return iconMap[nodeName] || "NodeNodes";
 		},
-		buildWirePathString(outputBounds: DOMRect, inputBounds: DOMRect, verticalOut: boolean, verticalIn: boolean): string {
+		buildWirePathLocations(outputBounds: DOMRect, inputBounds: DOMRect, verticalOut: boolean, verticalIn: boolean): { x: number; y: number }[] {
 			const containerBounds = (this.$refs.nodesContainer as HTMLDivElement | undefined)?.getBoundingClientRect();
-			if (!containerBounds) return "[error]";
+			if (!containerBounds) return [];
 
 			const outX = verticalOut ? outputBounds.x + outputBounds.width / 2 : outputBounds.x + outputBounds.width - 1;
 			const outY = verticalOut ? outputBounds.y + 1 : outputBounds.y + outputBounds.height / 2;
@@ -439,9 +468,17 @@ export default defineComponent({
 			const horizontalCurve = horizontalCurveAmount * curveLength;
 			const verticalCurve = verticalCurveAmount * curveLength;
 
-			return `M${outConnectorX},${outConnectorY} C${verticalOut ? outConnectorX : outConnectorX + horizontalCurve},${verticalOut ? outConnectorY - verticalCurve : outConnectorY} ${
-				verticalIn ? inConnectorX : inConnectorX - horizontalCurve
-			},${verticalIn ? inConnectorY + verticalCurve : inConnectorY} ${inConnectorX},${inConnectorY}`;
+			return [
+				{ x: outConnectorX, y: outConnectorY },
+				{ x: verticalOut ? outConnectorX : outConnectorX + horizontalCurve, y: verticalOut ? outConnectorY - verticalCurve : outConnectorY },
+				{ x: verticalIn ? inConnectorX : inConnectorX - horizontalCurve, y: verticalIn ? inConnectorY + verticalCurve : inConnectorY },
+				{ x: inConnectorX, y: inConnectorY },
+			];
+		},
+		buildWirePathString(outputBounds: DOMRect, inputBounds: DOMRect, verticalOut: boolean, verticalIn: boolean): string {
+			const locations = this.buildWirePathLocations(outputBounds, inputBounds, verticalOut, verticalIn);
+			if (locations.length === 0) return "[error]";
+			return `M${locations[0].x},${locations[0].y} C${locations[1].x},${locations[1].y} ${locations[2].x},${locations[2].y} ${locations[3].x},${locations[3].y}`;
 		},
 		createWirePath(outputPort: HTMLDivElement, inputPort: HTMLDivElement | DOMRect, verticalOut: boolean, verticalIn: boolean): [string, string] {
 			const inputPortRect = inputPort instanceof HTMLDivElement ? inputPort.getBoundingClientRect() : inputPort;
@@ -489,8 +526,18 @@ export default defineComponent({
 				this.transform.x -= scrollY / this.transform.scale;
 			}
 		},
+		keydown(e: KeyboardEvent): void {
+			if (e.key.toLowerCase() === "escape") {
+				this.nodeListLocation = undefined;
+				document.removeEventListener("keydown", this.keydown);
+			}
+		},
 		// TODO: Move the event listener from the graph to the window so dragging outside the graph area (or even the browser window) works
 		pointerDown(e: PointerEvent) {
+			// Exit the add node popup by clicking elsewhere in the graph
+			if (this.nodeListLocation && !(e.target as HTMLElement).closest("[data-node-list]")) this.nodeListLocation = undefined;
+
+			// Handle the add node popup on right click
 			if (e.button === 2) {
 				const graphDiv: HTMLDivElement | undefined = (this.$refs.graph as typeof LayoutCol | undefined)?.$el;
 				const graph = graphDiv?.getBoundingClientRect() || new DOMRect();
@@ -498,6 +545,8 @@ export default defineComponent({
 					x: Math.round(((e.clientX - graph.x) / this.transform.scale - this.transform.x) / GRID_SIZE),
 					y: Math.round(((e.clientY - graph.y) / this.transform.scale - this.transform.y) / GRID_SIZE),
 				};
+
+				document.addEventListener("keydown", this.keydown);
 				return;
 			}
 
@@ -505,26 +554,56 @@ export default defineComponent({
 			const node = (e.target as HTMLElement).closest("[data-node]") as HTMLElement | undefined;
 			const nodeId = node?.getAttribute("data-node") || undefined;
 			const nodeList = (e.target as HTMLElement).closest("[data-node-list]") as HTMLElement | undefined;
+			const containerBounds = this.$refs.nodesContainer as HTMLDivElement | undefined;
+			if (!containerBounds) return;
 
 			// If the user is clicking on the add nodes list, exit here
 			if (nodeList) return;
 
+			if (e.altKey && nodeId) {
+				this.editor.instance.togglePreview(BigInt(nodeId));
+			}
+
 			// Clicked on a port dot
-			if (port) {
+			if (port && node) {
 				const isOutput = Boolean(port.getAttribute("data-port") === "output");
 
 				if (isOutput) this.linkInProgressFromConnector = port;
+				else {
+					const inputNodeInPorts = Array.from(node.querySelectorAll(`[data-port="input"]`));
+					const inputNodeConnectionIndexSearch = inputNodeInPorts.indexOf(port);
+					const inputIndex = inputNodeConnectionIndexSearch > -1 ? inputNodeConnectionIndexSearch : undefined;
+					// Set the link to draw from the input that a previous link was on
+					if (inputIndex !== undefined && nodeId) {
+						const nodeIdInt = BigInt(nodeId);
+						const inputIndexInt = BigInt(inputIndex);
+						const links = this.nodeGraph.state.links;
+						const linkIndex = links.findIndex((value) => value.linkEnd === nodeIdInt && value.linkEndInputIndex === inputIndexInt);
+						const queryString = `[data-node="${String(links[linkIndex].linkStart)}"] [data-port="output"]`;
+						this.linkInProgressFromConnector = (containerBounds.querySelector(queryString) || undefined) as HTMLDivElement | undefined;
+						const nodeInputConnectors = containerBounds.querySelectorAll(`[data-node="${String(links[linkIndex].linkEnd)}"] [data-port="input"]`) || undefined;
+						this.linkInProgressToConnector = nodeInputConnectors?.[Number(links[linkIndex].linkEndInputIndex)] as HTMLDivElement | undefined;
+						this.disconnecting = { nodeId: nodeIdInt, inputIndex, linkIndex };
+						this.refreshLinks();
+					}
+				}
 
 				return;
 			}
 
 			// Clicked on a node
 			if (nodeId) {
+				let modifiedSelected = false;
+
 				const id = BigInt(nodeId);
 				if (e.shiftKey || e.ctrlKey) {
+					modifiedSelected = true;
+
 					if (this.selected.includes(id)) this.selected.splice(this.selected.lastIndexOf(id), 1);
 					else this.selected.push(id);
 				} else if (!this.selected.includes(id)) {
+					modifiedSelected = true;
+
 					this.selected = [id];
 				} else {
 					this.selectIfNotDragged = id;
@@ -534,15 +613,17 @@ export default defineComponent({
 					this.draggingNodes = { startX: e.x, startY: e.y, roundX: 0, roundY: 0 };
 				}
 
-				this.editor.instance.selectNodes(new BigUint64Array(this.selected));
+				if (modifiedSelected) this.editor.instance.selectNodes(new BigUint64Array(this.selected));
 
 				return;
 			}
 
 			// Clicked on the graph background
 			this.panning = true;
-			this.selected = [];
-			this.editor.instance.selectNodes(new BigUint64Array(this.selected));
+			if (this.selected.length !== 0) {
+				this.selected = [];
+				this.editor.instance.selectNodes(new BigUint64Array(this.selected));
+			}
 		},
 		doubleClick(e: MouseEvent) {
 			const node = (e.target as HTMLElement).closest("[data-node]") as HTMLElement | undefined;
@@ -575,7 +656,14 @@ export default defineComponent({
 			}
 		},
 		pointerUp(e: PointerEvent) {
+			const containerBounds = this.$refs.nodesContainer as HTMLDivElement | undefined;
+			if (!containerBounds) return;
 			this.panning = false;
+
+			if (this.disconnecting) {
+				this.editor.instance.disconnectNodes(BigInt(this.disconnecting.nodeId), this.disconnecting.inputIndex);
+			}
+			this.disconnecting = undefined;
 
 			if (this.linkInProgressToConnector instanceof HTMLDivElement && this.linkInProgressFromConnector) {
 				const outputNode = this.linkInProgressFromConnector.closest("[data-node]");
@@ -597,12 +685,56 @@ export default defineComponent({
 				}
 			} else if (this.draggingNodes) {
 				if (this.draggingNodes.startX === e.x || this.draggingNodes.startY === e.y) {
-					if (this.selectIfNotDragged) {
+					if (this.selectIfNotDragged !== undefined && (this.selected.length !== 1 || this.selected[0] !== this.selectIfNotDragged)) {
 						this.selected = [this.selectIfNotDragged];
 						this.editor.instance.selectNodes(new BigUint64Array(this.selected));
 					}
 				}
-				this.editor.instance.moveSelectedNodes(this.draggingNodes.roundX, this.draggingNodes.roundY);
+
+				if (this.selected.length > 0 && (this.draggingNodes.roundX !== 0 || this.draggingNodes.roundY !== 0))
+					this.editor.instance.moveSelectedNodes(this.draggingNodes.roundX, this.draggingNodes.roundY);
+
+				// Check if this node should be inserted between two other nodes
+				if (this.selected.length === 1) {
+					const selectedNodeId = this.selected[0];
+					const selectedNode = containerBounds.querySelector(`[data-node="${String(selectedNodeId)}"]`);
+
+					// Check that neither the input or output of the selected node are already connected.
+					const notConnected =
+						this.nodeGraph.state.links.findIndex((link) => link.linkStart === selectedNodeId || (link.linkEnd === selectedNodeId && link.linkEndInputIndex === BigInt(0))) === -1;
+					const input = selectedNode?.querySelector(`[data-port="input"]`);
+					const output = selectedNode?.querySelector(`[data-port="output"]`);
+
+					// TODO: Make sure inputs are correctly typed
+					if (selectedNode && notConnected && input && output) {
+						// Find the link that the node has been dragged on top of
+						const link = this.nodeGraph.state.links.find((link): boolean => {
+							const { nodePrimaryInput, nodePrimaryOutput } = this.resolveLink(link, containerBounds);
+							if (!nodePrimaryInput || !nodePrimaryOutput) return false;
+
+							const wireCurveLocations = this.buildWirePathLocations(nodePrimaryOutput.getBoundingClientRect(), nodePrimaryInput.getBoundingClientRect(), false, false);
+
+							const selectedNodeBounds = selectedNode.getBoundingClientRect();
+							const containerBoundsBounds = containerBounds.getBoundingClientRect();
+
+							return this.editor.instance.rectangleIntersects(
+								new Float64Array(wireCurveLocations.map((loc) => loc.x)),
+								new Float64Array(wireCurveLocations.map((loc) => loc.y)),
+								selectedNodeBounds.top - containerBoundsBounds.y,
+								selectedNodeBounds.left - containerBoundsBounds.x,
+								selectedNodeBounds.bottom - containerBoundsBounds.y,
+								selectedNodeBounds.right - containerBoundsBounds.x
+							);
+						});
+						// If the node has been dragged on top of the link then connect it into the middle.
+						if (link) {
+							this.editor.instance.connectNodesByLink(link.linkStart, selectedNodeId, 0);
+							this.editor.instance.connectNodesByLink(selectedNodeId, link.linkEnd, Number(link.linkEndInputIndex));
+							this.editor.instance.shiftNode(selectedNodeId);
+						}
+					}
+				}
+
 				this.draggingNodes = undefined;
 				this.selectIfNotDragged = undefined;
 			}
@@ -625,6 +757,10 @@ export default defineComponent({
 		const outputPort2 = document.querySelectorAll(`[data-port="output"]`)[6] as HTMLDivElement | undefined;
 		const inputPort2 = document.querySelectorAll(`[data-port="input"]`)[3] as HTMLDivElement | undefined;
 		if (outputPort2 && inputPort2) this.createWirePath(outputPort2, inputPort2.getBoundingClientRect(), true, false);
+
+		this.editor.subscriptions.subscribeJsMessage(UpdateNodeGraphSelection, (updateNodeGraphSelection) => {
+			this.selected = updateNodeGraphSelection.selected;
+		});
 	},
 	components: {
 		IconLabel,

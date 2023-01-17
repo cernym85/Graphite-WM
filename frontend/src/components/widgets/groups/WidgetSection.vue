@@ -85,6 +85,7 @@
 		margin-bottom: 4px;
 		border: 1px solid var(--color-5-dullgray);
 		border-radius: 0 0 4px 4px;
+		overflow: hidden;
 
 		.widget-row {
 			&:first-child {
@@ -95,17 +96,25 @@
 				margin-bottom: calc(4px - 1px);
 			}
 
+			> .text-button:first-child {
+				margin-left: 16px;
+			}
+
 			> .text-label:first-of-type {
-				flex: 0 0 30%;
-				text-align: right;
+				flex: 0 0 25%;
+				margin-left: 16px;
 			}
 
 			> .parameter-expose-button ~ .text-label:first-of-type {
-				text-align: left;
+				margin-left: 0;
 			}
 
 			> .text-button {
 				flex-grow: 1;
+			}
+
+			> .radio-input button {
+				flex: 1 1 100%;
 			}
 		}
 	}

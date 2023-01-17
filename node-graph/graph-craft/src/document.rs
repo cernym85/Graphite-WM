@@ -6,6 +6,7 @@ use std::sync::Mutex;
 pub mod value;
 
 use dyn_any::{DynAny, StaticType};
+use glam::IVec2;
 use rand_chacha::{
 	rand_core::{RngCore, SeedableRng},
 	ChaCha20Rng,
@@ -33,7 +34,7 @@ fn merge_ids(a: u64, b: u64) -> u64 {
 #[derive(Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DocumentNodeMetadata {
-	pub position: (i32, i32),
+	pub position: IVec2,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -93,6 +94,28 @@ impl DocumentNode {
 		} else {
 			unreachable!("tried to resolve not flattened node on resolved node");
 		}
+	}
+
+	/// Converts all node id inputs to a new id based on a HashMap.
+	///
+	/// If the node is not in the hashmap then a default input is found based on the node name and input index.
+	pub fn map_ids<P>(mut self, default_input: P, new_ids: &HashMap<NodeId, NodeId>) -> Self
+	where
+		P: Fn(String, usize) -> Option<NodeInput>,
+	{
+		for (index, input) in self.inputs.iter_mut().enumerate() {
+			let &mut NodeInput::Node(id) = input else {
+				continue;
+			};
+			if let Some(&new_id) = new_ids.get(&id) {
+				*input = NodeInput::Node(new_id);
+			} else if let Some(new_input) = default_input(self.name.clone(), index) {
+				*input = new_input;
+			} else {
+				warn!("Node does not exist in library with that many inputs");
+			}
+		}
+		self
 	}
 }
 
@@ -163,12 +186,18 @@ pub struct NodeNetwork {
 	pub inputs: Vec<NodeId>,
 	pub output: NodeId,
 	pub nodes: HashMap<NodeId, DocumentNode>,
+	/// These nodes are replaced with identity nodes when flattening
+	pub disabled: Vec<NodeId>,
+	/// In the case where a new node is chosen as output - what was the origional
+	pub previous_output: Option<NodeId>,
 }
 
 impl NodeNetwork {
 	pub fn map_ids(&mut self, f: impl Fn(NodeId) -> NodeId + Copy) {
 		self.inputs.iter_mut().for_each(|id| *id = f(*id));
 		self.output = f(self.output);
+		self.disabled.iter_mut().for_each(|id| *id = f(*id));
+		self.previous_output = self.previous_output.map(f);
 		let mut empty = HashMap::new();
 		std::mem::swap(&mut self.nodes, &mut empty);
 		self.nodes = empty
@@ -178,6 +207,19 @@ impl NodeNetwork {
 				(f(id), node)
 			})
 			.collect();
+	}
+
+	/// Collect a hashmap of nodes with a list of the nodes that use it as input
+	pub fn collect_outwards_links(&self) -> HashMap<NodeId, Vec<NodeId>> {
+		let mut outwards_links: HashMap<u64, Vec<u64>> = HashMap::new();
+		for (node_id, node) in &self.nodes {
+			for input in &node.inputs {
+				if let NodeInput::Node(ref_id) = input {
+					outwards_links.entry(*ref_id).or_default().push(*node_id)
+				}
+			}
+		}
+		outwards_links
 	}
 
 	pub fn flatten(&mut self, node: NodeId) {
@@ -191,6 +233,13 @@ impl NodeNetwork {
 			.remove_entry(&node)
 			.unwrap_or_else(|| panic!("The node which was supposed to be flattened does not exist in the network, id {} network {:#?}", node, self));
 
+		if self.disabled.contains(&id) {
+			node.implementation = DocumentNodeImplementation::Unresolved(NodeIdentifier::new("graphene_core::ops::IdNode", &[generic!("T")]));
+			node.inputs.drain(1..);
+			self.nodes.insert(id, node);
+			return;
+		}
+
 		match node.implementation {
 			DocumentNodeImplementation::Network(mut inner_network) => {
 				// Connect all network inputs to either the parent network nodes, or newly created value nodes.
@@ -198,6 +247,7 @@ impl NodeNetwork {
 				let new_nodes = inner_network.nodes.keys().cloned().collect::<Vec<_>>();
 				// Copy nodes from the inner network into the parent network
 				self.nodes.extend(inner_network.nodes);
+				self.disabled.extend(inner_network.disabled);
 
 				let mut network_offsets = HashMap::new();
 				for (document_input, network_input) in node.inputs.into_iter().zip(inner_network.inputs.iter()) {
@@ -250,6 +300,11 @@ impl NodeNetwork {
 			nodes,
 		}
 	}
+
+	/// Get the original output node of this network, ignoring any preview node
+	pub fn original_output(&self) -> NodeId {
+		self.previous_output.unwrap_or(self.output)
+	}
 }
 
 #[cfg(test)]
@@ -292,6 +347,7 @@ mod test {
 			]
 			.into_iter()
 			.collect(),
+			..Default::default()
 		}
 	}
 
@@ -324,6 +380,7 @@ mod test {
 			]
 			.into_iter()
 			.collect(),
+			..Default::default()
 		};
 		assert_eq!(network, maped_add);
 	}
@@ -350,6 +407,7 @@ mod test {
 			)]
 			.into_iter()
 			.collect(),
+			..Default::default()
 		};
 		network.flatten_with_fns(1, |self_id, inner_id| self_id * 10 + inner_id, gen_node_id);
 		let flat_network = flat_network();
@@ -467,6 +525,7 @@ mod test {
 			]
 			.into_iter()
 			.collect(),
+			..Default::default()
 		}
 	}
 }

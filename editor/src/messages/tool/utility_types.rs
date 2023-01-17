@@ -10,8 +10,8 @@ use crate::messages::layout::utility_types::widgets::input_widgets::SwatchPairIn
 use crate::messages::layout::utility_types::widgets::label_widgets::{Separator, SeparatorDirection, SeparatorType};
 use crate::messages::prelude::*;
 
-use graphene::color::Color;
-use graphene::layers::text_layer::FontCache;
+use document_legacy::color::Color;
+use document_legacy::layers::text_layer::FontCache;
 
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug};
@@ -315,8 +315,8 @@ fn list_tools_in_groups() -> Vec<Vec<ToolAvailability>> {
 		],
 		vec![
 			// Raster tool group
-			ToolAvailability::Available(Box::<imaginate_tool::ImaginateTool>::default()),
 			ToolAvailability::Available(Box::<node_graph_frame_tool::NodeGraphFrameTool>::default()),
+			ToolAvailability::Available(Box::<imaginate_tool::ImaginateTool>::default()),
 			ToolAvailability::ComingSoon(ToolEntry {
 				tool_type: ToolType::Brush,
 				icon_name: "RasterBrushTool".into(),
