@@ -48,17 +48,13 @@ export default defineComponent({
 	},
 	mounted() {
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelOptionsLayout, (updatePropertyPanelOptionsLayout) => {
-			
 			patchWidgetLayout(this.propertiesOptionsLayout, updatePropertyPanelOptionsLayout);
 			//this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
 			let processed = false;
 			let type = "";
-			debugger
 			try {
-				let itm:any=updatePropertyPanelOptionsLayout;
-				const pole: any = itm.diff[0].newValue[0];
-				
-				const array = pole.rowWidgets;
+				let layouty:any=this.propertiesOptionsLayout.layout[0];
+				const array = layouty.rowWidgets;
 				for (const obj of array) {
 					if (obj.props.kind === "TextLabel") {
 						type = obj.props.value;
@@ -80,7 +76,6 @@ export default defineComponent({
 						break;
 					}
 				}
-				
 			} catch (e) { }
 
 			if (!processed) {
