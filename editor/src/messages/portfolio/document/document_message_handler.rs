@@ -358,7 +358,7 @@ impl MessageHandler<DocumentMessage, (u64, &InputPreprocessorMessageHandler, &Pe
 
 				// Calculate the bounding box of the region to be exported
 				let bounds = match bounds {
-					ExportBounds::AllArtwork => self.artboard_message_handler.artboards_graphene_document.root.aabb(&persistent_data.font_cache), //self.all_layer_bounds(&persistent_data.font_cache),
+					ExportBounds::AllArtwork => self.artboard_message_handler.artboards_document.root.aabb(&persistent_data.font_cache), //self.all_layer_bounds(&persistent_data.font_cache),
 					ExportBounds::Selection => self.selected_visible_layers_bounding_box(&persistent_data.font_cache),
 					ExportBounds::Artboard(id) => self
 						.artboard_message_handler

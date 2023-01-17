@@ -48,12 +48,16 @@ export default defineComponent({
 	},
 	mounted() {
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelOptionsLayout, (updatePropertyPanelOptionsLayout) => {
+			debugger
 			patchWidgetLayout(this.propertiesOptionsLayout, updatePropertyPanelOptionsLayout);
 			//this.propertiesOptionsLayout = updatePropertyPanelOptionsLayout;
 			let processed = false;
 			let type = "";
+			debugger
 			try {
+				/*
 				const pole: any = updatePropertyPanelOptionsLayout.layout[0];
+				
 				const array = pole.rowWidgets;
 				for (const obj of array) {
 					if (obj.props.kind === "TextLabel") {
@@ -76,6 +80,7 @@ export default defineComponent({
 						break;
 					}
 				}
+				*/
 			} catch (e) { }
 
 			if (!processed) {
@@ -85,6 +90,7 @@ export default defineComponent({
 
 		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
+			debugger
 			patchWidgetLayout(this.propertiesSectionsLayout, updatePropertyPanelSectionsLayout);
 			//this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
 			//detekce zmeny velikosti kanvasu

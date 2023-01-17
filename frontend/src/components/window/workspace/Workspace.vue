@@ -20,11 +20,9 @@
 				</LayoutRow>
 			</LayoutCol>
 			<LayoutCol class="workspace-grid-resize-gutter" data-gutter-horizontal @pointerdown="(e: PointerEvent) => resizePanel(e)"></LayoutCol>
-			<LayoutCol class="workspace-grid-subdivision" style="flex-grow: 0.2">
-				<LayoutRow class="workspace-grid-subdivision" style="flex-grow: 402">
-					<Panel id="__myscadaSelectPanelIdForActive" :panelType="'Properties'"
-						:tabLabels="[{ name: 'Properties' }, { name: 'Animations' }]" :tabActiveIndex="0"
-						:clickAction="(index:number) =>changeTab(index)" />
+			<LayoutCol class="workspace-grid-subdivision" :style="{ 'flex-grow': panelSizes['details'] }" data-subdivision-name="details">
+				<LayoutRow class="workspace-grid-subdivision" :style="{ 'flex-grow': panelSizes['properties'] }" data-subdivision-name="properties">
+					<Panel id="__myscadaSelectPanelIdForActive" :panelType="'Properties'" :tabLabels="[{ name: 'Properties' }, { name: 'Animations' }]" :tabActiveIndex="0" :clickAction="(index:number) =>changeTab(index)"/>
 				</LayoutRow>
 				<LayoutRow class="workspace-grid-resize-gutter" data-gutter-vertical @pointerdown="(e: PointerEvent) => resizePanel(e)"></LayoutRow>
 				<LayoutRow class="workspace-grid-subdivision" :style="{ 'flex-grow': panelSizes['layers'] }" data-subdivision-name="layers">
