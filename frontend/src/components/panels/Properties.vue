@@ -85,7 +85,7 @@ export default defineComponent({
 
 		
 		this.editor.subscriptions.subscribeJsMessage(UpdatePropertyPanelSectionsLayout, (updatePropertyPanelSectionsLayout) => {
-			patchWidgetLayout(this.updatePropertyPanelSectionsLayout, UpdatePropertyPanelSectionsLayout);
+			patchWidgetLayout(this.propertiesSectionsLayout, updatePropertyPanelSectionsLayout);
 			//this.propertiesSectionsLayout = updatePropertyPanelSectionsLayout;
 			//detekce zmeny velikosti kanvasu
 			try{
