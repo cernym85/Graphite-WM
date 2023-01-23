@@ -130,7 +130,7 @@ export default defineComponent({
 						let pb = tab?.getElementsByClassName("panel-body");
 						if (pb && pb.length > 0) {
 							let rect = pb[0].getBoundingClientRect();
-							window.parent.postMessage(JSON.stringify({ type: "selection", action: "empty",  x: rect.x, y: rect.y, w: rect.width, h: rect.height }), "*");
+							window.parent.postMessage(JSON.stringify({ type: "selection", action: "changeTab",  x: rect.x, y: rect.y, w: rect.width, h: rect.height }), "*");
 						}
 					}
 				}
