@@ -62,11 +62,17 @@ export default defineComponent({
 					else if (obj.props.kind === "TextInput") {
 						let tab = window.document.getElementById("__myscadaSelectPanelIdForActive");
 						let children = tab?.getElementsByClassName("tab");
-						if (children && children.length > 1 && children[1].classList.contains("active")) {
+						if (children && children.length > 1) {
+							let action="id";
+
+							if (!children[1].classList.contains("active")){
+								action="memoryId"
+							}
+
 							let pb = tab?.getElementsByClassName("panel-body");
 							if (pb && pb.length > 0) {
 								let rect = pb[0].getBoundingClientRect();
-								window.parent.postMessage(JSON.stringify({ type: "selection", action: "id", id: obj.props.value, element: type, x: rect.x, y: rect.y, w: rect.width, h: rect.height }), "*");
+								window.parent.postMessage(JSON.stringify({ type: "selection", action: action, id: obj.props.value, element: type, x: rect.x, y: rect.y, w: rect.width, h: rect.height }), "*");
 							}
 						}
 						else {
